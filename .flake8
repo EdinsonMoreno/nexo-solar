@@ -1,0 +1,23 @@
+[flake8]
+max-line-length = 127
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .eggs,
+    *.egg-info,
+    .hypothesis,
+    .pytest_cache,
+    .coverage,
+    htmlcov,
+    venv,
+    env
+max-complexity = 18
+ignore = E203,E501,W503,D205,D412,D202,D401,D100,D101,D102,D107,D400,D104,D200
+per-file-ignores =
+    __init__.py:F401
+    modbuspython/tests/*:F401,F841,E402,E722,E226,F811,F541,E721
+    modbuspython/examples/*:E402,E722,F841,F541
+    modbuspython/backend/modbus_client.py:F401,F811
+    run.py:E402

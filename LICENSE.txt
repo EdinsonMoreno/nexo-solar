@@ -1,0 +1,35 @@
+# LICENCIA DE USO RESTRINGIDO - Nexo Solar
+
+Este software y su código fuente han sido desarrollados como parte de un proyecto de grado. Todos los derechos están reservados por su autor.
+
+## Condiciones de uso
+
+1. **Propiedad intelectual:**
+   - El código, documentación y recursos asociados son propiedad exclusiva del autor del proyecto.
+
+2. **Permiso de uso:**
+   - Se concede a las Unidades Tecnológicas de Santander (UTS) el derecho indefinido de uso, modificación, adaptación y despliegue del software, incluyendo su código fuente y recursos asociados, para fines académicos, administrativos y de investigación.
+
+3. **Restricciones:**
+   - No se permite la distribución, publicación, sublicenciamiento, comercialización ni cesión del software o su código fuente a terceros ajenos al autor y a las UTS, salvo autorización expresa y por escrito del autor.
+   - No se permite el uso del software para fines comerciales sin el consentimiento del autor.
+
+4. **Modificaciones:**
+   - Las UTS pueden modificar, adaptar y mejorar el software según sus necesidades, manteniendo la atribución al autor original.
+   - El autor puede seguir desarrollando, adaptando o reutilizando el código para fines propios o académicos.
+
+5. **Responsabilidad:**
+   - El software se entrega "tal cual", sin garantías de ningún tipo. El autor no se hace responsable de daños directos o indirectos derivados del uso del software.
+
+6. **Reconocimiento:**
+   - En toda utilización, despliegue o adaptación del software, deberá mantenerse el reconocimiento al autor original y al proyecto de grado.
+
+---
+
+Para cualquier consulta, solicitud de autorización o reporte de incidencias, contactar al autor del proyecto.
+
+Fecha: 2025
+Autor:
+Edinson Andres Moreno Cepeda
+
+Institución: Unidades Tecnológicas de Santander (UTS)

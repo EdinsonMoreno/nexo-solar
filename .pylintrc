@@ -1,0 +1,44 @@
+[MASTER]
+ignore=CVS,.git,__pycache__,.hypothesis,.pytest_cache,build,dist
+jobs=1
+
+[MESSAGES CONTROL]
+disable=
+    C0111,  # missing-docstring (will be enabled gradually)
+    R0903,  # too-few-public-methods
+    C0103,  # invalid-name (for Qt naming conventions)
+    R0913,  # too-many-arguments
+    R0914,  # too-many-locals
+    W0212,  # protected-access (needed for Qt)
+
+[FORMAT]
+max-line-length=127
+indent-string='    '
+expected-line-ending-format=LF
+
+[DESIGN]
+max-args=7
+max-attributes=10
+max-bool-expr=5
+max-branches=12
+max-locals=15
+max-parents=7
+max-public-methods=20
+max-returns=6
+max-statements=50
+min-public-methods=1
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,x,y,z,id,db
+
+[SIMILARITIES]
+min-similarity-lines=4
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=yes
+
+[TYPECHECK]
+ignored-modules=PyQt6
+
+[IMPORTS]
+allow-wildcard-with-all=no

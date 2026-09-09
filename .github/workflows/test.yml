@@ -1,0 +1,112 @@
+name: Nexo Solar checks
+
+on:
+  push:
+    branches: [ dev, QA, main ]
+  pull_request:
+    branches: [ dev, QA, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1 libxcb-cursor0
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pylint flake8 black mypy pytest-xvfb
+
+    - name: Run Black formatter check
+      run: |
+        black --check --diff modbuspython/
+      continue-on-error: true
+
+    - name: Run Flake8
+      run: |
+        flake8 modbuspython/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 modbuspython/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Run Pylint
+      run: |
+        pylint modbuspython/ --exit-zero --max-line-length=127 --disable=C0111,R0903
+      continue-on-error: true
+
+    - name: Run MyPy type checking
+      run: |
+        mypy modbuspython/ --ignore-missing-imports --no-strict-optional
+      continue-on-error: true
+
+    - name: Run unit tests with coverage
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        pytest modbuspython/tests/unit/ -v --cov=modbuspython --cov-report=xml --cov-report=term-missing --cov-fail-under=60
+
+    - name: Run integration tests
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        pytest modbuspython/tests/integration/ -v --cov=modbuspython --cov-append --cov-report=xml --cov-report=term-missing
+      continue-on-error: true
+
+    - name: Run property-based tests
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        pytest modbuspython/tests/property_based/ -v --cov=modbuspython --cov-append --cov-report=xml --cov-report=term-missing
+      continue-on-error: true
+
+    - name: Check overall coverage
+      run: |
+        coverage report --fail-under=80
+      continue-on-error: true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+
+    - name: Run Bandit security scan
+      run: |
+        bandit -r modbuspython/ -f json -o bandit-report.json
+      continue-on-error: true
+
+    - name: Run Safety check
+      run: |
+        safety check --json
+      continue-on-error: true

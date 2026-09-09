@@ -1,0 +1,50 @@
+# SolarSense SCADA Default Configuration
+# This file contains default configuration values for the application
+
+# Modbus TCP Communication Settings
+modbus:
+  host: "192.168.1.100"  # ESP8266 IP address
+  port: 502              # Modbus TCP port
+  timeout: 5.0           # Connection timeout in seconds
+  retry_attempts: 3      # Number of retry attempts for failed operations
+  retry_backoff: 1.0     # Base delay for exponential backoff in seconds
+
+  # Modbus register addresses
+  registers:
+    rotation_setpoint: 0   # Register for rotation angle setpoint
+    elevation_setpoint: 1  # Register for elevation angle setpoint
+    rotation_actual: 2     # Register for actual rotation angle
+    elevation_actual: 3    # Register for actual elevation angle
+    irradiance: 4          # Register for irradiance reading
+
+# Database Configuration
+database:
+  path: "data/solarsense.db"  # Path to SQLite database file
+  table_name: "measurements"   # Name of the measurements table
+  connection_pool_size: 5      # Maximum number of database connections
+
+# Logging Configuration
+logging:
+  level: "INFO"                    # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file_path: "logs/solarsense.log" # Path to log file
+  max_bytes: 10485760              # Maximum log file size (10 MB)
+  backup_count: 5                  # Number of backup log files to keep
+
+# Angle Limits
+angles:
+  rotation_min: 0      # Minimum rotation angle in degrees
+  rotation_max: 360    # Maximum rotation angle in degrees
+  elevation_min: 0     # Minimum elevation angle in degrees
+  elevation_max: 145   # Maximum elevation angle in degrees
+
+# User Interface Settings
+ui:
+  update_interval_ms: 1000    # UI update interval in milliseconds
+  chart_history_points: 100   # Number of data points to display in charts
+  language: "es"              # UI language: "es" (Spanish) or "en" (English)
+
+# Performance Settings
+performance:
+  startup_timeout_s: 5      # Maximum startup time in seconds
+  shutdown_timeout_s: 10    # Maximum shutdown time in seconds
+  max_memory_mb: 500        # Maximum memory usage in MB before warning

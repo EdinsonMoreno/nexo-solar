@@ -1,0 +1,191 @@
+# ============================================
+# Nexo Solar - Git Ignore Configuration
+# ============================================
+
+# ---- Python ----
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+*.whl
+*.manifest
+*.spec
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Installer
+*.exe
+
+# ---- Testing ----
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+*.cover
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+*.coverage
+bandit-report.json
+pylint_report.txt
+test_results.txt
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- Data & Databases ----
+data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite3
+
+# ---- Environment & Secrets (NEVER commit) ----
+.env
+.env.local
+.env.production
+.env.*
+*.key
+*.pem
+*.cert
+*.p12
+*.pfx
+
+# Keep example file tracked
+!.env.example
+
+# ---- Configuration (keep examples only) ----
+config.yaml
+config.json
+*.ini
+
+# ---- Temporary Files ----
+*.tmp
+*.temp
+tmp*/
+temp*/
+.cache/
+*.bak
+*.backup
+
+# ---- OS Files ----
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs:*.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+DS_Store
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ---- Qt / PyQt ----
+.QtWebEngineProcess/
+QtWebEngine/
+*.qm
+
+# ---- Documentation (Generated/Temporary) ----
+IMPORT_FIX_SUMMARY.md
+SOLUCION_IMPORTS.md
+SAFE_STATE_IMPLEMENTATION.md
+TASK_*.md
+TASK_*.txt
+COVERAGE_SETUP.md
+PRE_COMMIT_SETUP.md
+TESTING.md
+TEST_*.md
+TEST_*.txt
+*_REPORT.md
+*_REPORT.txt
+*_SUMMARY.md
+*_SUMMARY.txt
+*_GUIDE.md
+*_DIAGRAM.md
+*_DEPENDENCIES.md
+*_VERIFICATION*.md
+README_*.md
+*_README.md
+*_DEPENDENCIES.md
+ARCHITECTURE_DEPENDENCIES.md
+dependency_diagram.md
+module_dependencies.md
+3.0
+*.md~
+*.txt~
+
+# ---- Kiro (AI Assistant) ----
+.kiro/*
+!.kiro/specs/
+.kiro/specs/*
+!.kiro/specs/davis-weatherlink-reader/
+
+# ---- CI/CD ----
+.github/workflows/README.md
+
+# ---- Build Tools ----
+MANIFEST
+*.tar.gz
+*.zip
+
+# ---- Jupyter Notebooks ----
+.ipynb_checkpoints/
+
+# ---- mypy ----
+.dmypy.json
+dmypy.json
+
+# Archivos de proyecto necesarios
+!main_app.spec
+!pytest.ini
+!mypy.ini
+
+# Sesiones locales y datos privados
+.claude/
+.codex/
+.engram/
+*.sqlite
+*.sqlite-*

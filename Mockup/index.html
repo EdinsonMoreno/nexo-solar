@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SolarSense SCADA — Mockup</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo">
+        <span class="logo-icon">☀</span>
+        <span class="logo-text">Solar<strong>Sense</strong></span>
+        <span class="logo-badge">SCADA</span>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <span class="topbar-title">Sistema de Monitoreo Solar</span>
+    </div>
+    <div class="topbar-right">
+      <span class="mode-label">Modo de operación</span>
+      <div class="mode-toggle" id="modeToggle">
+        <button class="mode-btn active" data-mode="auto" onclick="setMode('auto')">Automático</button>
+        <button class="mode-btn" data-mode="manual" onclick="setMode('manual')">Manual</button>
+      </div>
+      <div class="status-dot green" id="connDot" title="Conexión activa"></div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('monitor')">
+      <span class="tab-icon">📊</span> Monitor
+    </button>
+    <button class="tab-btn" onclick="switchTab('ubicacion')">
+      <span class="tab-icon">📍</span> Ubicación
+    </button>
+    <button class="tab-btn" onclick="switchTab('diagnostico')">
+      <span class="tab-icon">🔧</span> Diagnóstico
+    </button>
+    <button class="tab-btn" onclick="switchTab('analisis')">
+      <span class="tab-icon">📈</span> Análisis
+    </button>
+    <button class="tab-btn" onclick="switchTab('documentacion')">
+      <span class="tab-icon">📄</span> Documentación
+    </button>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- ===== TAB: MONITOR ===== -->
+    <section class="tab-panel active" id="tab-monitor">
+      <div class="monitor-grid">
+
+        <!-- Gauge Card -->
+        <div class="card gauge-card">
+          <div class="card-header">
+            <span class="card-title">Irradiancia Solar</span>
+            <span class="card-unit">W/m²</span>
+          </div>
+          <div class="gauge-wrapper">
+            <canvas id="gaugeCanvas" width="320" height="200"></canvas>
+          </div>
+          <div class="value-display" id="irradDisplay">0.00</div>
+          <div class="value-sub">W/m²</div>
+          <div class="gauge-stats">
+            <div class="stat"><span class="stat-label">Mín</span><span class="stat-val" id="statMin">0</span></div>
+            <div class="stat"><span class="stat-label">Máx</span><span class="stat-val" id="statMax">0</span></div>
+            <div class="stat"><span class="stat-label">Prom</span><span class="stat-val" id="statAvg">0</span></div>
+          </div>
+        </div>
+
+        <!-- Chart Card -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <span class="card-title">Radiación en Tiempo Real</span>
+            <div class="chart-controls">
+              <button class="chip active" onclick="setChartRange(50, this)">50</button>
+              <button class="chip" onclick="setChartRange(100, this)">100</button>
+              <button class="chip" onclick="setChartRange(200, this)">200</button>
+            </div>
+          </div>
+          <canvas id="chartCanvas" width="600" height="260"></canvas>
+        </div>
+
+        <!-- Log Card -->
+        <div class="card log-card">
+          <div class="card-header">
+            <span class="card-title">Consola del Sistema</span>
+            <button class="icon-btn" onclick="clearLog()" title="Limpiar">✕</button>
+          </div>
+          <div class="log-console" id="logConsole"></div>
+        </div>
+
+        <!-- Actions Card -->
+        <div class="card actions-card">
+          <div class="card-header">
+            <span class="card-title">Estado y Acciones</span>
+          </div>
+          <div class="state-row">
+            <div class="led green" id="sysLed"></div>
+            <span class="state-text" id="sysStateText">Estado: Normal</span>
+          </div>
+          <div class="actions-btns">
+            <button class="btn btn-primary" onclick="toggleSimulation()">
+              <span id="simBtnIcon">⏸</span> <span id="simBtnText">Pausar Simulación</span>
+            </button>
+            <button class="btn btn-secondary" onclick="openSQLiteModal()">
+              📊 Configurar SQLite
+            </button>
+            <button class="btn btn-danger hidden" id="recoveryBtn" onclick="exitSafeState()">
+              🔄 Recuperar Modo Seguro
+            </button>
+          </div>
+          <div class="angles-info">
+            <div class="angle-row">
+              <span class="angle-label">Rotación</span>
+              <span class="angle-val" id="rotVal">0°</span>
+            </div>
+            <div class="angle-row">
+              <span class="angle-label">Elevación</span>
+              <span class="angle-val" id="eleVal">0°</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== TAB: UBICACIÓN ===== -->
+    <section class="tab-panel" id="tab-ubicacion">
+      <div class="sub-tabs-nav">
+        <button class="sub-tab-btn active" onclick="switchSubTab('ubicacion', 'equipo')">Ubicación del Equipo</button>
+        <button class="sub-tab-btn" onclick="switchSubTab('ubicacion', 'seguidor')">Seguidor Solar Automático</button>
+        <button class="sub-tab-btn" onclick="switchSubTab('ubicacion', 'manual')">Control Manual</button>
+      </div>
+
+      <!-- Sub-tab: Ubicación del Equipo -->
+      <div class="sub-tab-panel active" id="sub-ubicacion-equipo">
+        <div class="location-grid">
+          <div class="card location-controls-card">
+            <div class="card-header"><span class="card-title">Buscar Ubicación</span></div>
+            <div class="search-row">
+              <input type="text" class="input-field" id="searchInput" placeholder="Ej: Bucaramanga, Colombia" />
+              <button class="btn btn-primary" onclick="searchLocation()">Buscar</button>
+            </div>
+            <div class="coords-grid">
+              <div class="field-group">
+                <label class="field-label">Latitud</label>
+                <input type="number" class="input-field" id="latInput" value="7.119349" step="0.000001" min="-90" max="90" oninput="updateLocationInfo()" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Longitud</label>
+                <input type="number" class="input-field" id="lonInput" value="-73.122742" step="0.000001" min="-180" max="180" oninput="updateLocationInfo()" />
+              </div>
+            </div>
+            <button class="btn btn-secondary full-width" onclick="applyCoords()">Usar Coordenadas</button>
+
+            <div class="location-info-box" id="locationInfoBox"></div>
+
+            <div class="map-actions">
+              <button class="btn btn-outline" onclick="openGoogleMaps()">🗺️ Google Maps</button>
+              <button class="btn btn-outline" onclick="openGoogleEarth()">🌍 Google Earth</button>
+            </div>
+          </div>
+
+          <div class="card map-card">
+            <div class="card-header"><span class="card-title">Mapa Interactivo</span></div>
+            <div class="map-shell" id="mapPlaceholder">
+              <div id="map"></div>
+              <div class="map-state" id="mapState" hidden>
+                <div class="map-state-icon">⚠</div>
+                <div class="map-state-title" id="mapStateTitle">Sin conexión</div>
+                <div class="map-state-msg" id="mapStateMsg">
+                  No se pudieron descargar los mapas. Las coordenadas siguen siendo válidas
+                  y el seguidor solar funciona con normalidad.
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="retryMapTiles()">Reintentar</button>
+              </div>
+              <div class="map-overlay-info">
+                <span id="mapSource">Cargando mapa…</span>
+                <span id="mapZoom">Zoom: —</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Seguidor Solar Automático -->
+      <div class="sub-tab-panel" id="sub-ubicacion-seguidor">
+        <div class="solar-tracker-grid">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Parámetros de Entrada</span></div>
+            <div class="tracker-fields">
+              <div class="field-group">
+                <label class="field-label">Latitud</label>
+                <input type="number" class="input-field" id="trackerLat" value="7.119349" step="0.1" oninput="calcSolar()" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Longitud</label>
+                <input type="number" class="input-field" id="trackerLon" value="-73.122742" step="0.1" oninput="calcSolar()" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Día del Año</label>
+                <input type="number" class="input-field" id="trackerDay" value="126" min="1" max="366" oninput="calcSolar()" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Tiempo Local (h)</label>
+                <input type="number" class="input-field" id="trackerHour" value="12" min="0" max="24" oninput="calcSolar()" />
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Resultados Calculados</span></div>
+            <div class="results-grid">
+              <div class="result-item">
+                <span class="result-label">Ángulo de Hora Solar (HRA)</span>
+                <span class="result-val" id="resHRA">0.00°</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Declinación Solar</span>
+                <span class="result-val" id="resDec">0.0000°</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Ángulo de Elevación (ALT)</span>
+                <span class="result-val" id="resAlt">0.0000°</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Ángulo de Azimut (AZ)</span>
+                <span class="result-val" id="resAz">0.0000°</span>
+              </div>
+            </div>
+            <div class="sun-visual" id="sunVisual">
+              <div class="sun-arc">
+                <div class="sun-dot" id="sunDot">☀</div>
+              </div>
+              <div class="horizon-line"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Control Manual -->
+      <div class="sub-tab-panel" id="sub-ubicacion-manual">
+        <div class="manual-grid">
+          <div class="card manual-controls-card">
+            <div class="card-header"><span class="card-title">Control de Ángulos</span></div>
+            <div class="angle-control">
+              <label class="field-label">Elevación: <span id="elevDisplay">0°</span></label>
+              <div class="slider-vertical-wrapper">
+                <input type="range" class="slider-vertical" id="elevSlider" min="0" max="145" value="0" orient="vertical" oninput="syncAngle('elev', this.value)" />
+              </div>
+              <input type="number" class="input-field small" id="elevSpin" min="0" max="145" value="0" oninput="syncAngle('elev', this.value)" />
+            </div>
+            <div class="angle-control">
+              <label class="field-label">Rotación: <span id="rotDisplay">0°</span></label>
+              <input type="range" class="slider-horizontal" id="rotSlider" min="0" max="360" value="0" oninput="syncAngle('rot', this.value)" />
+              <input type="number" class="input-field small" id="rotSpin" min="0" max="360" value="0" oninput="syncAngle('rot', this.value)" />
+            </div>
+            <button class="btn btn-primary full-width" onclick="sendManualOrder()">Cargar Orden</button>
+          </div>
+          <div class="card visor3d-card">
+            <div class="card-header"><span class="card-title">Visor 3D — Piranómetro</span></div>
+            <div class="visor3d-container">
+              <canvas id="visor3dCanvas" width="480" height="320"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB: DIAGNÓSTICO ===== -->
+    <section class="tab-panel" id="tab-diagnostico">
+      <div class="diag-grid">
+
+        <div class="card diag-status-card">
+          <div class="card-header"><span class="card-title">Estado del Sistema</span></div>
+          <div class="led-row">
+            <div class="led-item">
+              <div class="led green" id="diagLedConn"></div>
+              <span>Conexión</span>
+            </div>
+            <div class="led-item">
+              <div class="led red" id="diagLedSensor"></div>
+              <span>Sensor</span>
+            </div>
+          </div>
+          <button class="btn btn-secondary full-width" onclick="runDiagnostic()">Diagnóstico Automático</button>
+
+          <div class="card-header" style="margin-top:16px"><span class="card-title">Configuración Modbus</span></div>
+          <div class="field-group">
+            <label class="field-label">IP ESP8266</label>
+            <input type="text" class="input-field" id="diagIP" value="192.168.171.188" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Puerto</label>
+            <input type="number" class="input-field" id="diagPort" value="502" />
+          </div>
+          <button class="btn btn-primary full-width" id="diagConnBtn" onclick="toggleDiagConn()">Conectar</button>
+
+          <div class="state-row" style="margin-top:12px">
+            <div class="led green" id="diagSafeStateLed"></div>
+            <span class="state-text" id="diagSafeStateText">Estado: Normal</span>
+          </div>
+          <button class="btn btn-danger full-width hidden" id="diagRecoveryBtn" onclick="diagExitSafeState()">
+            🔄 Recuperar de Modo Seguro
+          </button>
+        </div>
+
+        <div class="card diag-data-card">
+          <div class="card-header"><span class="card-title">Datos en Tiempo Real</span></div>
+          <div class="diag-data-grid">
+            <div class="diag-data-item">
+              <span class="diag-data-label">Motor 1 (Rotación)</span>
+              <span class="diag-data-val" id="diagMotor1">0°</span>
+            </div>
+            <div class="diag-data-item">
+              <span class="diag-data-label">Motor 2 (Elevación)</span>
+              <span class="diag-data-val" id="diagMotor2">0°</span>
+            </div>
+            <div class="diag-data-item highlight">
+              <span class="diag-data-label">Radiación Solar</span>
+              <span class="diag-data-val large" id="diagRad">0.00 W/m²</span>
+            </div>
+            <div class="diag-data-item">
+              <span class="diag-data-label">Estado</span>
+              <span class="diag-data-val" id="diagEstado">Desconectado</span>
+            </div>
+            <div class="diag-data-item">
+              <span class="diag-data-label">Quality</span>
+              <span class="diag-data-val" id="diagQuality">Bad</span>
+            </div>
+            <div class="diag-data-item">
+              <span class="diag-data-label">Timestamp</span>
+              <span class="diag-data-val" id="diagTimestamp">—</span>
+            </div>
+            <div class="diag-data-item">
+              <span class="diag-data-label">Update Count</span>
+              <span class="diag-data-val" id="diagUpdateCount">0</span>
+            </div>
+          </div>
+          <div class="diag-actions">
+            <button class="btn btn-secondary" onclick="diagReadRad()">Leer Radiación</button>
+            <button class="btn btn-secondary" onclick="diagSendSetpoints()">Enviar Consignas</button>
+            <label class="toggle-label">
+              <input type="checkbox" id="autoReadCheck" checked onchange="toggleAutoRead()" />
+              Lectura automática
+            </label>
+          </div>
+          <div class="diag-actions" style="margin-top:8px">
+            <button class="btn btn-outline" id="diagTestBtn" onclick="startModbusTest()">Prueba Modbus</button>
+            <button class="btn btn-outline" id="diagStopBtn" onclick="stopModbusTest()" disabled>Detener Prueba</button>
+          </div>
+        </div>
+
+        <div class="card diag-log-card">
+          <div class="card-header">
+            <span class="card-title">Consola de Logs</span>
+            <button class="icon-btn" onclick="clearDiagLog()">✕</button>
+          </div>
+          <div class="log-console" id="diagLogConsole"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== TAB: ANÁLISIS ===== -->
+    <section class="tab-panel" id="tab-analisis">
+
+      <!-- Origen de los datos: visible mientras se muestren datos sintéticos -->
+      <div class="data-banner" id="anaSourceBanner" hidden>
+        <span class="data-banner-tag">DATOS DE DEMOSTRACIÓN</span>
+        <span class="data-banner-text">
+          Los gráficos de esta pestaña se generan con datos sintéticos, no con mediciones del piranómetro.
+          <span id="anaSourceDetail"></span>
+        </span>
+      </div>
+
+      <!-- Toolbar de carga y filtros -->
+      <div class="analysis-toolbar">
+        <div class="toolbar-left">
+          <div class="db-source-row">
+            <span class="field-label" style="margin:0">Fuente</span>
+            <select class="input-field" id="anaTableSelect" style="width:220px">
+              <option value="">Cargando tablas…</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadAnalysisData()">
+              <span id="loadBtnIcon">⬇</span> Cargar Datos
+            </button>
+            <button class="btn btn-outline" onclick="exportCSV()">↗ Exportar CSV</button>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <div class="date-range-row">
+            <span class="field-label" style="margin:0">Desde</span>
+            <input type="date" class="input-field" id="anaDateFrom" style="width:140px" onchange="markDatesTouched()" />
+            <span class="field-label" style="margin:0">Hasta</span>
+            <input type="date" class="input-field" id="anaDateTo" style="width:140px" onchange="markDatesTouched()" />
+            <button class="btn btn-secondary" onclick="applyDateFilter()">Filtrar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <span class="kpi-icon" style="color:var(--accent4)">☀</span>
+          <div class="kpi-body">
+            <span class="kpi-label">Irradiancia Máxima</span>
+            <span class="kpi-val" id="kpiMax">1 847.3 W/m²</span>
+            <span class="kpi-sub" id="kpiMaxDate">06 May 2025 · 12:34</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon" style="color:var(--accent)">⌀</span>
+          <div class="kpi-body">
+            <span class="kpi-label">Promedio Diario</span>
+            <span class="kpi-val" id="kpiAvg">623.8 W/m²</span>
+            <span class="kpi-sub" id="kpiAvgSub">últimos 30 días</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon" style="color:var(--accent2)">∑</span>
+          <div class="kpi-body">
+            <span class="kpi-label">Energía Acumulada</span>
+            <span class="kpi-val" id="kpiEnergy">4 218 kWh/m²</span>
+            <span class="kpi-sub" id="kpiEnergySub">período seleccionado</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon" style="color:var(--accent3)">↕</span>
+          <div class="kpi-body">
+            <span class="kpi-label">Variabilidad</span>
+            <span class="kpi-val" id="kpiStd">±182 W/m²</span>
+            <span class="kpi-sub">desviación estándar</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon" style="color:#a371f7">📋</span>
+          <div class="kpi-body">
+            <span class="kpi-label">Total Registros</span>
+            <span class="kpi-val" id="kpiCount">12 480</span>
+            <span class="kpi-sub" id="kpiCountSub">en el período</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row 1: histórico + distribución -->
+      <div class="analysis-row-2">
+
+        <div class="card ana-chart-card">
+          <div class="card-header">
+            <span class="card-title">Irradiancia Histórica</span>
+            <div class="chart-controls">
+              <button class="chip active" onclick="setAnaView('day', this)">Día</button>
+              <button class="chip" onclick="setAnaView('week', this)">Semana</button>
+              <button class="chip" onclick="setAnaView('month', this)">Mes</button>
+            </div>
+          </div>
+          <canvas id="anaHistChart" height="220"></canvas>
+        </div>
+
+        <div class="card ana-dist-card">
+          <div class="card-header">
+            <span class="card-title">Distribución por Rangos</span>
+            <span class="card-unit">frecuencia</span>
+          </div>
+          <canvas id="anaDistChart" height="220"></canvas>
+        </div>
+
+      </div>
+
+      <!-- Charts row 2: heatmap + tabla -->
+      <div class="analysis-row-2" style="margin-top:16px">
+
+        <div class="card ana-heatmap-card">
+          <div class="card-header">
+            <span class="card-title">Mapa de Calor — Irradiancia por Hora y Día</span>
+            <span class="card-unit">W/m²</span>
+          </div>
+          <canvas id="anaHeatmap" height="200"></canvas>
+          <div class="heatmap-legend">
+            <span class="legend-label">0</span>
+            <div class="legend-bar"></div>
+            <span class="legend-label">2000 W/m²</span>
+          </div>
+        </div>
+
+        <div class="card ana-stats-card">
+          <div class="card-header">
+            <span class="card-title">Estadísticas por Hora del Día</span>
+          </div>
+          <canvas id="anaHourlyChart" height="200"></canvas>
+        </div>
+
+      </div>
+
+      <!-- Data table -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header">
+          <span class="card-title">Registros Recientes</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" class="input-field" id="tableSearch" placeholder="Buscar..." style="width:180px" oninput="filterTable(this.value)" />
+            <span class="card-unit" id="tableCount">mostrando 20 de 12 480</span>
+          </div>
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table" id="dataTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('id')"># <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('fecha')">Fecha <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('hora')">Hora <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('irradiancia')">Irradiancia (W/m²) <span class="sort-icon">↕</span></th>
+                <th>Calidad</th>
+              </tr>
+            </thead>
+            <tbody id="dataTableBody"></tbody>
+          </table>
+        </div>
+        <div class="table-pagination">
+          <button class="btn btn-outline" onclick="prevPage()">← Anterior</button>
+          <span class="page-info" id="pageInfo">Página 1 de 624</span>
+          <button class="btn btn-outline" onclick="nextPage()">Siguiente →</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===== TAB: DOCUMENTACIÓN ===== -->
+    <section class="tab-panel" id="tab-documentacion">
+      <div class="card doc-card">
+        <div class="card-header">
+          <span class="card-title">Documentación del Sistema</span>
+          <div class="doc-actions">
+            <button class="btn btn-secondary" onclick="reloadDoc()">🔄 Recargar</button>
+            <button class="btn btn-outline" id="docToggleBtn" onclick="toggleDocView()">📝 Vista Código</button>
+          </div>
+        </div>
+        <div class="doc-viewer" id="docViewer"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: SQLite Config -->
+  <div class="modal-overlay hidden" id="sqliteModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Configurar Base de Datos SQLite</span>
+        <button class="icon-btn" onclick="closeSQLiteModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label class="field-label">Archivo de Base de Datos</label>
+          <div class="input-row">
+            <input type="text" class="input-field" id="dbPath" value="./data/irradiancia.db" />
+            <button class="btn btn-outline" onclick="browseDB()">Cambiar...</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Tabla existente</label>
+          <select class="input-field" id="tableSelect">
+            <option>-- Seleccionar tabla --</option>
+            <option>solar_data</option>
+            <option>irradiancia_2024</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">O crear nueva tabla</label>
+          <input type="text" class="input-field" id="newTableName" placeholder="nombre_tabla..." />
+        </div>
+        <div class="schema-info">
+          <span class="schema-label">Esquema:</span>
+          <code>id (AUTO), fecha (TEXT), hora (TEXT), irradiancia (REAL)</code>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeSQLiteModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="acceptSQLite()">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast hidden" id="toast"></div>
+
+  <!-- Provided by Qt only when running inside QWebEngine; ignored in a plain browser -->
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

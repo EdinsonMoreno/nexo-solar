@@ -1,0 +1,238 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "JSON Schema for validating SolarSense SCADA configuration files",
+  "properties": {
+    "angles": {
+      "description": "Angle limits configuration",
+      "properties": {
+        "elevation_max": {
+          "default": 145,
+          "description": "Maximum elevation angle in degrees",
+          "maximum": 145,
+          "minimum": 0,
+          "type": "number"
+        },
+        "elevation_min": {
+          "default": 0,
+          "description": "Minimum elevation angle in degrees",
+          "maximum": 145,
+          "minimum": 0,
+          "type": "number"
+        },
+        "rotation_max": {
+          "default": 360,
+          "description": "Maximum rotation angle in degrees",
+          "maximum": 360,
+          "minimum": 0,
+          "type": "number"
+        },
+        "rotation_min": {
+          "default": 0,
+          "description": "Minimum rotation angle in degrees",
+          "maximum": 360,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "database": {
+      "description": "SQLite database configuration",
+      "properties": {
+        "connection_pool_size": {
+          "default": 5,
+          "description": "Maximum number of database connections",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "path": {
+          "description": "Path to SQLite database file",
+          "type": "string"
+        },
+        "table_name": {
+          "description": "Name of the measurements table",
+          "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "table_name"
+      ],
+      "type": "object"
+    },
+    "logging": {
+      "description": "Logging configuration",
+      "properties": {
+        "backup_count": {
+          "default": 5,
+          "description": "Number of backup log files to keep",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "file_path": {
+          "description": "Path to log file",
+          "type": "string"
+        },
+        "level": {
+          "default": "INFO",
+          "description": "Logging level",
+          "enum": [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL"
+          ],
+          "type": "string"
+        },
+        "max_bytes": {
+          "default": 10485760,
+          "description": "Maximum log file size in bytes before rotation",
+          "minimum": 1048576,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "modbus": {
+      "description": "Modbus TCP communication configuration",
+      "properties": {
+        "host": {
+          "description": "Modbus TCP server IP address",
+          "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+          "type": "string"
+        },
+        "port": {
+          "description": "Modbus TCP server port",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "registers": {
+          "description": "Modbus register addresses",
+          "properties": {
+            "elevation_actual": {
+              "description": "Register address for actual elevation",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "elevation_setpoint": {
+              "description": "Register address for elevation setpoint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "irradiance": {
+              "description": "Register address for irradiance reading",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "rotation_actual": {
+              "description": "Register address for actual rotation",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "rotation_setpoint": {
+              "description": "Register address for rotation setpoint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "retry_attempts": {
+          "default": 3,
+          "description": "Number of retry attempts for failed operations",
+          "maximum": 10,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retry_backoff": {
+          "default": 1.0,
+          "description": "Base delay for exponential backoff in seconds",
+          "maximum": 10.0,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "timeout": {
+          "description": "Connection timeout in seconds",
+          "maximum": 30.0,
+          "minimum": 0.1,
+          "type": "number"
+        }
+      },
+      "required": [
+        "host",
+        "port",
+        "timeout"
+      ],
+      "type": "object"
+    },
+    "performance": {
+      "description": "Performance and resource limits",
+      "properties": {
+        "max_memory_mb": {
+          "default": 500,
+          "description": "Maximum memory usage in MB before warning",
+          "maximum": 2000,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "shutdown_timeout_s": {
+          "default": 10,
+          "description": "Maximum shutdown time in seconds",
+          "maximum": 60,
+          "minimum": 1,
+          "type": "number"
+        },
+        "startup_timeout_s": {
+          "default": 5,
+          "description": "Maximum startup time in seconds",
+          "maximum": 30,
+          "minimum": 1,
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "ui": {
+      "description": "User interface configuration",
+      "properties": {
+        "chart_history_points": {
+          "default": 100,
+          "description": "Number of data points to display in charts",
+          "maximum": 1000,
+          "minimum": 10,
+          "type": "integer"
+        },
+        "language": {
+          "default": "es",
+          "description": "UI language code",
+          "enum": [
+            "es",
+            "en"
+          ],
+          "type": "string"
+        },
+        "update_interval_ms": {
+          "default": 1000,
+          "description": "UI update interval in milliseconds",
+          "maximum": 10000,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "modbus",
+    "database",
+    "logging",
+    "angles"
+  ],
+  "title": "SolarSense SCADA Configuration Schema",
+  "type": "object"
+}

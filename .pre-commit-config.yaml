@@ -1,0 +1,83 @@
+# Pre-commit hooks for SolarSense SCADA
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Black - Python code formatter
+  - repo: https://github.com/psf/black
+    rev: 26.3.1
+    hooks:
+      - id: black
+
+  # Flake8 - Python linter
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: ['--config=.flake8']
+        additional_dependencies: [flake8-docstrings]
+
+  # MyPy - Static type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        args: ['--config-file=mypy.ini', '--ignore-missing-imports', '--explicit-package-bases']
+        additional_dependencies: [types-PyYAML, types-jsonschema]
+        exclude: ^tests/
+
+  # Bandit - Security linter
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+
+  # Check for print() statements
+  - repo: local
+    hooks:
+      - id: no-print-statements
+        name: Check for print() statements
+        entry: python -c "import sys; import re; files = sys.argv[1:]; pattern = re.compile(r'^\s*print\s*\('); exit(any(any(pattern.match(line) for line in open(f, encoding='utf-8')) for f in files))"
+        language: system
+        types: [python]
+        exclude: ^(tests/|modbuspython/tests/|modbuspython/examples/|analyze_.*\.py$|setup\.py$|\.pre-commit-hooks/)
+
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-json
+      - id: pretty-format-json
+        args: ['--autofix', '--indent=2']
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: debug-statements
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Check for temporary files
+  - repo: local
+    hooks:
+      - id: no-temp-files
+        name: Check for temporary files
+        entry: python -c "import sys; import re; files = sys.argv[1:]; temp_patterns = [r'tmpclaude', r'\.tmp$', r'~$']; exit(any(any(re.search(p, f) for p in temp_patterns) for f in files))"
+        language: system
+        pass_filenames: true
+
+  # Check for __pycache__ directories
+  - repo: local
+    hooks:
+      - id: no-pycache
+        name: Check for __pycache__ directories
+        entry: python -c "import sys; exit(any('__pycache__' in f for f in sys.argv[1:]))"
+        language: system
+        pass_filenames: true

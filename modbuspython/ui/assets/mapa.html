@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mapa Solar Sense</title>
+
+    <!-- Leaflet CSS local (offline) -->
+    <link rel="stylesheet" href="leaflet/leaflet.css" />
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+      }
+      #map {
+        width: 100%;
+        height: 100vh;
+        background-color: #f0f0f0;
+      }
+      .custom-info {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .coordinate-display {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px 12px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-family: monospace;
+        font-size: 12px;
+        z-index: 1000;
+        border: 1px solid #ccc;
+      }
+      .leaflet-popup-content {
+        margin: 8px 12px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="coordinate-display" id="coordDisplay">
+      Lat: 19.432600<br />
+      Lon: -99.133200
+    </div>
+
+    <!-- Leaflet JS local (offline) -->
+    <script src="leaflet/leaflet.js"></script>
+
+    <script>
+      try {
+        var map = L.map("map").setView([19.4326, -99.1332], 13);
+
+        // Tiles online (puedes cambiar a offline si tienes tiles locales)
+        var onlineTileUrl =
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+        // var offlineTileUrl = 'assets/tiles/{z}/{x}/{y}.png';
+
+        var osmLayer = L.tileLayer(onlineTileUrl, {
+          attribution: "© OpenStreetMap contributors",
+          maxZoom: 19,
+        });
+
+        osmLayer.addTo(map);
+
+        var mainMarker = L.marker([19.4326, -99.1332], {
+          draggable: true,
+          title: "Ubicación Solar Sense",
+        }).addTo(map);
+
+        var popupContent = `<div class="custom-info"><h4>📍 Ubicación Solar Sense</h4><p><strong>Coordenadas:</strong><br>Lat: 19.432600°<br>Lon: -99.133200°</p><p><strong>Info Solar:</strong><br>Hemisferio: Norte<br>Zona UTC: -6</p><p><em>🔧 Arrastre el marcador para cambiar ubicación</em></p></div>`;
+        mainMarker.bindPopup(popupContent).openPopup();
+
+        function updateCoordinates(lat, lng) {
+          var coordDiv = document.getElementById("coordDisplay");
+          coordDiv.innerHTML =
+            "Lat: " + lat.toFixed(6) + "<br>Lon: " + lng.toFixed(6);
+
+          var newPopupContent = `
+                <div class="custom-info">
+                    <h4>📍 Ubicación Solar Sense</h4>
+                    <p><strong>Coordenadas:</strong><br>
+                    Lat: ${lat.toFixed(6)}°<br>
+                    Lon: ${lng.toFixed(6)}°</p>
+                    <p><em>🔧 Arrastre el marcador para cambiar ubicación</em></p>
+                </div>
+            `;
+          mainMarker.setPopupContent(newPopupContent);
+        }
+
+        mainMarker.on("dragend", function (e) {
+          var pos = e.target.getLatLng();
+          updateCoordinates(pos.lat, pos.lng);
+          // Comunicación bidireccional: notificar a Python
+          if (window.location && window.location.hash !== undefined) {
+            // Actualiza el hash para que Python lo lea (opcional)
+            window.location.hash = `lat=${pos.lat}&lng=${pos.lng}`;
+          }
+        });
+
+        // --- Permitir sincronización desde Python ---
+        window.setMapLocation = function (lat, lon) {
+          if (typeof mainMarker !== "undefined" && typeof map !== "undefined") {
+            mainMarker.setLatLng([lat, lon]);
+            map.setView([lat, lon]);
+            updateCoordinates(lat, lon);
+          }
+        };
+      } catch (err) {
+        console.error("Error en JS personalizado:", err);
+      }
+    </script>
+  </body>
+</html>
