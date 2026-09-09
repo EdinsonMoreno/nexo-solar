@@ -393,75 +393,55 @@ html, body {
   border-radius: 4px;
 }
 
-/* ===== SOLAR TRACKER ===== */
-.solar-tracker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 700px) { .solar-tracker-grid { grid-template-columns: 1fr; } }
+/* ===== DAVIS WEATHER ===== */
+.weather-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+}
 
-.tracker-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.weather-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
 
-.results-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.result-item {
+.weather-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 74px;
+  justify-content: center;
+  padding: 12px;
   background: var(--bg3);
   border-radius: 6px;
   border: 1px solid var(--border);
 }
-.result-label { font-size: 12px; color: var(--text2); }
-.result-val { font-size: 14px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
 
-.sun-visual {
-  position: relative;
-  height: 80px;
-  margin-top: 8px;
+.weather-item.highlight {
+  border-color: var(--accent);
+  background: rgba(88,166,255,0.08);
 }
-.sun-arc {
-  position: absolute;
-  bottom: 20px; left: 10%; right: 10%;
-  height: 60px;
-  border: 2px dashed var(--border);
-  border-bottom: none;
-  border-radius: 100px 100px 0 0;
+
+.weather-label {
+  color: var(--text2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
-.sun-dot {
-  position: absolute;
+
+.weather-value {
+  color: var(--text);
   font-size: 18px;
-  transform: translate(-50%, -50%);
-  transition: left 0.5s ease, bottom 0.5s ease;
-  filter: drop-shadow(0 0 6px #f1c40f);
-}
-.horizon-line {
-  position: absolute;
-  bottom: 20px; left: 0; right: 0;
-  height: 1px;
-  background: var(--border);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ===== MANUAL CONTROL ===== */
-.manual-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
-@media (max-width: 700px) { .manual-grid { grid-template-columns: 1fr; } }
+@media (max-width: 800px) {
+  .weather-grid { grid-template-columns: 1fr; }
+}
 
-.angle-control { margin-bottom: 16px; }
-.slider-vertical-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 8px 0;
-  height: 100px;
-}
-.slider-vertical {
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 100%;
-  accent-color: var(--accent);
-}
-.slider-horizontal { width: 100%; accent-color: var(--accent); margin: 6px 0; }
 input[type="range"] { cursor: pointer; }
-
-.visor3d-card { display: flex; flex-direction: column; }
-.visor3d-container { flex: 1; display: flex; align-items: center; justify-content: center; }
-#visor3dCanvas { border-radius: 6px; background: #0a0f1a; }
 
 /* ===== DIAGNOSTIC ===== */
 .diag-grid {

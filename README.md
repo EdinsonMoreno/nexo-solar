@@ -2,9 +2,9 @@
 
 Software en preparación para el SENA CIDT de Barrancabermeja. Autor: Edinson Andres Moreno Cepeda.
 
-Esta es la base inicial de desarrollo. El rediseño de interfaz y la integración Davis WeatherLink están pendientes.
+Esta es la base inicial de desarrollo. La integración Davis WeatherLink inició por los módulos de parsing, CRC, conversiones y configuración.
 
-Sistema SCADA para monitoreo de irradiacion solar, adquisicion de datos Modbus, calculo de posicion solar y visualizacion geográfica. Desarrollado en Python con PyQt6 y Leaflet.js.
+Sistema SCADA para monitoreo de irradiacion solar, adquisicion de datos Modbus, lectura meteorologica Davis WeatherLink y visualizacion geografica. Desarrollado en Python con PyQt6 y Leaflet.js.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PyQt6](https://img.shields.io/badge/UI-PyQt6-green)](https://www.riverbankcomputing.com/software/pyqt/)
@@ -13,9 +13,8 @@ Sistema SCADA para monitoreo de irradiacion solar, adquisicion de datos Modbus, 
 ## Características
 
 - **Monitoreo en tiempo real**: Lectura de irradiacion solar via Modbus TCP desde dispositivos ESP8266
-- **Seguidor solar automatico**: Calculo de posicion solar (HRA, declinacion, elevacion, azimut) basado en coordenadas geograficas
-- **Control manual**: Ajuste manual de angulos de rotacion (0-360°) y elevacion (0-145°) con visor 3D
 - **Mapa interactivo**: Visualizacion geografica con Leaflet.js, soporte online y offline
+- **Estacion Davis WeatherLink**: Base de parsing, CRC y conversiones de unidades para paquetes LOOP
 - **Almacenamiento historico**: Base de datos SQLite con pool de conexiones y sistema de migraciones
 - **Arquitectura robusta**: 3 capas (backend, data_access, ui), validacion de entradas, reintentos con backoff exponencial, manejo de errores y safe state
 - **Seguridad**: Credenciales encriptadas, variables de entorno, filtros de datos sensibles en logs
@@ -32,6 +31,7 @@ Sistema SCADA para monitoreo de irradiacion solar, adquisicion de datos Modbus, 
 ### Hardware Compatible
 
 - ESP8266 con firmware Modbus TCP
+- Estacion meteorologica Davis Vantage Pro2 con WeatherLink USB en modo VCP o adaptador IP compatible
 - Cualquier dispositivo que implemente Modbus TCP en puerto 502
 
 ## Instalación
@@ -106,14 +106,13 @@ nexo-solar/
 │   │   ├── validators.py         # Validadores de configuracion
 │   │   └── config_schema.json    # JSON Schema
 │   ├── backend/                  # Logica de negocio
-│   │   ├── angle_state_manager.py  # Gestion de angulos y modos
-│   │   ├── solar_calcs.py        # Calculos de posicion solar
 │   │   ├── validation_service.py # Servicio de validacion
 │   │   ├── modbus_client.py      # Cliente Modbus (legacy)
 │   │   ├── sqlite_manager.py     # SQLite manager (legacy)
 │   │   └── logger.py             # Logger (legacy)
 │   ├── data_access/              # Acceso a datos
 │   │   ├── modbus_client.py      # Modbus TCP client (QThread)
+│   │   ├── davis_weatherlink/    # Parser, CRC y modelo WeatherLink
 │   │   ├── modbus_connection.py  # Operaciones de conexion
 │   │   ├── modbus_reader.py      # Operaciones de lectura
 │   │   ├── modbus_writer.py      # Operaciones de escritura
@@ -128,8 +127,6 @@ nexo-solar/
 │   ├── ui/                       # Interfaz de usuario
 │   │   ├── location_tab_fixed.py # Tab principal (orquestador)
 │   │   ├── location_setup_tab.py # Configuracion de ubicacion
-│   │   ├── solar_tracker_tab.py  # Calculos solares automaticos
-│   │   ├── manual_control_panel.py # Control manual + visor 3D
 │   │   ├── monitor_tab.py        # Monitor de irradiacion
 │   │   ├── diagnostic_tab.py     # Diagnostico del sistema
 │   │   ├── documentation_tab.py  # Documentacion integrada
@@ -175,15 +172,10 @@ La aplicacion abrira una ventana con las siguientes pestañas:
 
 1. **Monitor**: Vista en tiempo real de irradiacion con gauges circulares
 2. **Ubicacion del Equipo**: Configuracion de coordenadas geograficas con mapa
-3. **Seguidor Solar Automatico**: Calculo automatico de angulos solares
-4. **Control Manual**: Ajuste manual de angulos con visor 3D
-5. **Diagnostico**: Estado del sistema, logs y herramientas de diagnostico
+3. **Estacion Davis**: Lecturas meteorologicas en unidades de ingenieria
+4. **Diagnostico**: Estado del sistema, logs y herramientas de diagnostico
+5. **Analisis**: Consulta de historicos SQLite
 6. **Documentacion**: Guias integradas
-
-### Modos de Operación
-
-- **Automatico**: Los angulos se calculan y envian automaticamente basado en la posicion solar
-- **Manual**: El usuario ajusta los angulos directamente con sliders
 
 ## Arquitectura
 
@@ -195,10 +187,10 @@ El proyecto sigue una arquitectura de 3 capas:
 │  (PyQt6 Widgets, QWebEngineView, Leaflet.js)   │
 ├─────────────────────────────────────────────────┤
 │               Backend Layer                     │
-│  (AngleStateManager, SolarCalcs, Validation)    │
+│  (Validation, servicios de dominio)             │
 ├─────────────────────────────────────────────────┤
 │             Data Access Layer                   │
-│  (ModbusClient, DatabaseManager, Logging)       │
+│  (ModbusClient, Davis WeatherLink, SQLite)      │
 └─────────────────────────────────────────────────┘
 ```
 

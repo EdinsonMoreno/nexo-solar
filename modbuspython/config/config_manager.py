@@ -391,6 +391,14 @@ class ConfigurationManager:
             if not is_valid:
                 errors.append(f"database.table_name: {error_msg}")
 
+        davis_transport = self.get("davis_weatherlink.transport")
+        if davis_transport and davis_transport not in ("serial", "ip"):
+            errors.append("davis_weatherlink.transport: must be 'serial' or 'ip'")
+
+        davis_baud_rate = self.get("davis_weatherlink.baud_rate")
+        if davis_baud_rate is not None and int(davis_baud_rate) != 19200:
+            errors.append("davis_weatherlink.baud_rate: Davis WeatherLink VCP requires 19200")
+
         return errors
 
     def _load_defaults(self) -> None:
@@ -414,6 +422,17 @@ class ConfigurationManager:
                 "path": "data/solarsense.db",
                 "table_name": "measurements",
                 "connection_pool_size": 5,
+            },
+            "davis_weatherlink": {
+                "transport": "serial",
+                "serial_port": "/dev/ttyUSB0",
+                "baud_rate": 19200,
+                "ip_host": "192.168.1.50",
+                "ip_port": 22222,
+                "poll_interval_ms": 5000,
+                "timeout": 5.0,
+                "retry_attempts": 3,
+                "retry_backoff": 1.0,
             },
             "logging": {
                 "level": "INFO",

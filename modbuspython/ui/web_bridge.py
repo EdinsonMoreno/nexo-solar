@@ -1,14 +1,13 @@
 """QWebChannel bridge between the embedded web dashboard (Mockup SPA) and the
 Python backend.
 
-``WebBridge`` is the single integration contract between the JavaScript UI and
-the existing backend services:
+``WebBridge`` is the integration contract between the JavaScript UI and the
+existing backend services:
 
-- It re-emits backend Qt signals (Modbus client + AngleStateManager) as
-  JS-friendly signals consumed by ``Mockup/app.js``.
+- It re-emits backend Qt signals from the Modbus client as JS-friendly signals
+  consumed by ``Mockup/app.js``.
 - It exposes ``@pyqtSlot`` methods that the JavaScript calls on user actions,
-  routing them to the real backend (``ModbusClient``, ``AngleStateManager``,
-  ``solar_calcs``).
+  routing them to the real backend (``ModbusClient``).
 
 The bridge lives in the GUI thread; backend signals emitted from the Modbus
 QThread are delivered here through Qt's queued connections, so it is safe to
@@ -19,8 +18,6 @@ from typing import Any, Optional
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from ..backend.angle_state_manager import AngleStateManager
-from ..backend import solar_calcs
 from ..config.config_defaults import DEFAULT_CONFIG
 from ..data_access.logging_service import LoggingService
 from ..data_access.repositories.irradiance_repository import IrradianceRepository
@@ -39,15 +36,12 @@ class WebBridge(QObject):
     irradianceUpdated = pyqtSignal(float)
     logMessage = pyqtSignal(str, str, str)  # source, level, text
     connectionChanged = pyqtSignal(bool)
-    motorAngles = pyqtSignal(float, float)  # rotation, elevation
-    modeChanged = pyqtSignal(str)  # 'auto' | 'manual'
     safeStateChanged = pyqtSignal(bool)
 
     def __init__(self, modbus_manager: Any, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.logger = LoggingService()
         self.modbus = modbus_manager
-        self.angle_manager = AngleStateManager()  # singleton: same instance as MainWindow
         self._connected = False
         self._auto_read = True
         self._read_interval_ms = 2000
@@ -66,8 +60,6 @@ class WebBridge(QObject):
         self.modbus.log.connect(self._on_log)
         self.modbus.conexion_cambiada.connect(self._on_connection)
         self.modbus.retry_exhausted.connect(self._on_retry_exhausted)
-        self.angle_manager.angles_changed.connect(self._on_angles_changed)
-        self.angle_manager.mode_changed.connect(self._on_mode_changed)
 
     def disconnect_backend(self) -> None:
         """Best-effort disconnect of backend signals (used on cleanup)."""
@@ -76,8 +68,6 @@ class WebBridge(QObject):
             (self.modbus.log, self._on_log),
             (self.modbus.conexion_cambiada, self._on_connection),
             (self.modbus.retry_exhausted, self._on_retry_exhausted),
-            (self.angle_manager.angles_changed, self._on_angles_changed),
-            (self.angle_manager.mode_changed, self._on_mode_changed),
         ):
             try:
                 signal.disconnect(slot)
@@ -99,12 +89,6 @@ class WebBridge(QObject):
         self.safeStateChanged.emit(in_safe)
         self.logMessage.emit("SISTEMA", "error", f"Reintentos agotados en {operation}: {error}")
 
-    def _on_angles_changed(self, rot: float, ele: float, _source: object) -> None:
-        self.motorAngles.emit(float(rot), float(ele))
-
-    def _on_mode_changed(self, mode: str, _source: object) -> None:
-        self.modeChanged.emit(str(mode))
-
     @staticmethod
     def _classify_level(message: str) -> str:
         low = message.lower()
@@ -117,23 +101,6 @@ class WebBridge(QObject):
     # ------------------------------------------------------------------
     # JS -> Python slots
     # ------------------------------------------------------------------
-    @pyqtSlot(str)
-    def setMode(self, mode: str) -> None:
-        """Set operation mode ('auto' | 'manual') via the AngleStateManager."""
-        self.angle_manager.set_mode(mode, source="web")
-
-    @pyqtSlot(float, float)
-    def sendAngles(self, rotation: float, elevation: float) -> None:
-        """Set target angles through AngleStateManager (triggers auto-write)."""
-        ok, error = self.angle_manager.set_angles(float(rotation), float(elevation), source="web")
-        if not ok and error:
-            self.logMessage.emit("ANGULOS", "error", error)
-
-    @pyqtSlot(float, float)
-    def sendSetpoints(self, rotation: float, elevation: float) -> None:
-        """Write setpoints directly to the device (diagnostics path)."""
-        self.modbus.write_setpoints(float(rotation), float(elevation))
-
     @pyqtSlot()
     def readRadiation(self) -> None:
         self.modbus.read_irradiance()
@@ -179,15 +146,6 @@ class WebBridge(QObject):
     def recoverSafeState(self) -> None:
         self.modbus.exit_safe_state()
         self.safeStateChanged.emit(False)
-
-    @pyqtSlot(float, float, int, float, result="QVariantMap")
-    def computeSolar(self, lat: float, lon: float, day: int, hour: float) -> dict:
-        """Compute solar geometry using the canonical solar_calcs functions."""
-        decl = solar_calcs.calculate_decl(int(day))
-        hra = solar_calcs.calculate_hra(float(hour), float(lon), int(day))
-        alt = solar_calcs.calculate_alt(float(lat), decl, hra)
-        az = solar_calcs.calculate_az(float(lat), decl, hra, alt)
-        return {"hra": float(hra), "decl": float(decl), "alt": float(alt), "az": float(az)}
 
     @pyqtSlot(str, str, result=bool)
     def configureSqlite(self, db_path: str, table: str) -> bool:

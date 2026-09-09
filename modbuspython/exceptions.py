@@ -10,6 +10,9 @@ Exception Hierarchy:
     ├── ValidationError
     ├── ModbusConnectionError
     ├── ModbusOperationError
+    ├── DavisConnectionError
+    ├── DavisProtocolError
+    ├── DavisTransportError
     ├── DatabaseError
     └── MigrationError
 
@@ -113,6 +116,24 @@ class ModbusOperationError(SolarSenseException):
         - Invalid register address
         - Device returned error response
     """
+
+    pass
+
+
+class DavisConnectionError(SolarSenseException):
+    """Raised when the Davis weather station cannot be reached or configured."""
+
+    pass
+
+
+class DavisProtocolError(SolarSenseException):
+    """Raised when a Davis packet does not match the expected protocol format."""
+
+    pass
+
+
+class DavisTransportError(SolarSenseException):
+    """Raised when a Davis serial or TCP transport fails while reading or writing."""
 
     pass
 

@@ -62,6 +62,71 @@
       ],
       "type": "object"
     },
+    "davis_weatherlink": {
+      "description": "Davis WeatherLink communication configuration",
+      "properties": {
+        "baud_rate": {
+          "const": 19200,
+          "default": 19200,
+          "description": "Davis WeatherLink VCP baud rate",
+          "type": "integer"
+        },
+        "ip_host": {
+          "default": "192.168.1.50",
+          "description": "Davis WeatherLink IP host or compatible adapter address",
+          "type": "string"
+        },
+        "ip_port": {
+          "default": 22222,
+          "description": "Davis WeatherLink IP TCP port",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "poll_interval_ms": {
+          "default": 5000,
+          "description": "Polling interval for Davis LOOP reads",
+          "minimum": 1000,
+          "type": "integer"
+        },
+        "retry_attempts": {
+          "default": 3,
+          "description": "Retry attempts for Davis operations",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "retry_backoff": {
+          "default": 1.0,
+          "description": "Initial backoff delay for Davis retries",
+          "maximum": 10.0,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "serial_port": {
+          "default": "/dev/ttyUSB0",
+          "description": "Serial port used by the Davis WeatherLink USB logger in VCP mode",
+          "type": "string"
+        },
+        "timeout": {
+          "default": 5.0,
+          "description": "Davis transport timeout in seconds",
+          "maximum": 30.0,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "transport": {
+          "default": "serial",
+          "description": "Davis transport type",
+          "enum": [
+            "serial",
+            "ip"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "logging": {
       "description": "Logging configuration",
       "properties": {
@@ -230,8 +295,7 @@
   "required": [
     "modbus",
     "database",
-    "logging",
-    "angles"
+    "logging"
   ],
   "title": "SolarSense SCADA Configuration Schema",
   "type": "object"

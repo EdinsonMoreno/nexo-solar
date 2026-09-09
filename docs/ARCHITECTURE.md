@@ -1,8 +1,10 @@
-# SolarSense SCADA - Architecture Documentation
+# Nexo Solar - Architecture Documentation
 
 ## Overview
 
-SolarSense SCADA is a real-time solar monitoring system that communicates with ESP8266 devices via Modbus TCP to acquire irradiance data and control solar tracker angles. The application uses PyQt6 for the graphical interface and Leaflet.js for geographic visualization.
+Nexo Solar is a real-time solar and meteorological monitoring system. It reads irradiance through the existing Modbus TCP path, keeps geographic configuration through Leaflet.js, and adds a Davis WeatherLink parsing layer for weather station readings.
+
+The station supported by this version has no movement motors. The active web UI and `WebBridge` do not expose mode switching, angle commands, motor setpoints, solar tracking, or the 3D movement viewer. Legacy movement modules remain in the repository only to avoid a high-risk deletion while older tests still import them.
 
 ## Architecture Layers
 
@@ -72,10 +74,7 @@ Responsible for all user interface concerns. Contains PyQt6 widgets and QML/HTML
 |--------|---------------|
 | `main_app.py` | Application entry point, main window, tab management |
 | `monitor_tab.py` | Real-time irradiance display with circular gauges |
-| `location_tab_fixed.py` | Orchestrator for location-related sub-tabs |
 | `location_setup_tab.py` | Equipment location with map and geocoding search |
-| `solar_tracker_tab.py` | Automatic solar angle calculations display |
-| `manual_control_panel.py` | Manual angle controls with 3D viewer |
 | `diagnostic_tab.py` | System diagnostics and log viewer |
 | `map_widget.py` | Leaflet.js interactive map (QWebEngineView) |
 | `pyjs_bridge.py` | Python-JavaScript communication bridge |
@@ -91,8 +90,6 @@ Contains application business rules and domain logic.
 
 | Module | Responsibility |
 |--------|---------------|
-| `angle_state_manager.py` | Manages tracker modes (auto/manual) and angle state |
-| `solar_calcs.py` | Solar position calculations (HRA, declination, altitude, azimuth) |
 | `validation_service.py` | Input validation and sanitization |
 | `modbus_client.py` | Legacy Modbus client (being migrated to data_access) |
 | `sqlite_manager.py` | Legacy SQLite manager (being migrated to data_access) |
@@ -111,7 +108,7 @@ Handles all external I/O operations.
 | `modbus_client.py` | Threaded Modbus TCP client (QThread) |
 | `modbus_connection.py` | Connection establishment with retry |
 | `modbus_reader.py` | Irradiance reading with retry logic |
-| `modbus_writer.py` | Angle setpoint writing with safe state |
+| `davis_weatherlink/` | Davis WeatherLink model, CRC, conversions and LOOP parser |
 | `database_manager.py` | Connection pooling and context managers |
 | `connection_pool.py` | Thread-safe SQLite connection pool |
 | `retry_strategy.py` | Exponential backoff retry mechanism |

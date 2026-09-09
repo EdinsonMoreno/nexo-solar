@@ -1,6 +1,5 @@
 /* ===== STATE ===== */
 const state = {
-  mode: 'auto',
   simRunning: true,
   irradiance: 0,
   buffer: [],
@@ -14,8 +13,6 @@ const state = {
   diagAutoRead: true,
   diagUpdateCount: 0,
   docMode: 'html',
-  elev: 0,
-  rot: 0,
 };
 
 /* ===== INIT ===== */
@@ -25,16 +22,14 @@ window.addEventListener('DOMContentLoaded', () => {
   initLog();
   initDiagLog();
   loadDoc();
-  calcSolar();
   updateLocationInfo();
-  draw3D();
   // Use the Python backend if embedded in QWebEngine; otherwise simulate.
   if (!initBridge()) startSimulation();
 });
 
 /* ===== TABS ===== */
 function switchTab(name) {
-  const tabs = ['monitor', 'ubicacion', 'diagnostico', 'analisis', 'documentacion'];
+  const tabs = ['monitor', 'ubicacion', 'davis', 'diagnostico', 'analisis', 'documentacion'];
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === name);
   });
@@ -48,25 +43,6 @@ function switchTab(name) {
     populateTableSelect();
     if (!anaData.length) loadAnalysisData(); else renderAll();
   }
-}
-
-function switchSubTab(parent, name) {
-  const panel = document.getElementById('tab-' + parent);
-  panel.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
-  panel.querySelectorAll('.sub-tab-panel').forEach(p => p.classList.remove('active'));
-  const btns = panel.querySelectorAll('.sub-tab-btn');
-  const panels = ['equipo','seguidor','manual'];
-  btns.forEach((b, i) => b.classList.toggle('active', panels[i] === name));
-  document.getElementById('sub-' + parent + '-' + name).classList.add('active');
-  if (parent === 'ubicacion' && name === 'equipo') refreshMapSize();
-}
-
-/* ===== MODE ===== */
-function setMode(mode, fromBackend) {
-  state.mode = mode;
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  addLog(`Modo de operación cambiado a: ${mode === 'auto' ? 'Automático' : 'Manual'}`, 'info');
-  if (bridge && !fromBackend) bridge.setMode(mode);
 }
 
 /* ===== GAUGE ===== */
@@ -246,8 +222,6 @@ function initBridge() {
         diagLog(msg, lvl || 'info');
       });
       bridge.connectionChanged.connect(setConnectionUI);
-      bridge.motorAngles.connect(function (rot, elev) { syncAngle('rot', rot); syncAngle('elev', elev); });
-      bridge.modeChanged.connect(function (m) { setMode(m, true); });
       bridge.safeStateChanged.connect(setSafeStateUI);
       addLog('[SISTEMA] Conectado al backend (bridge activo)', 'info');
     });
@@ -316,11 +290,9 @@ function toggleSimulation() {
 
 /* ===== LOG ===== */
 function initLog() {
-  addLog('[SISTEMA] SolarSense SCADA iniciado correctamente', 'info');
+  addLog('[SISTEMA] Nexo Solar iniciado correctamente', 'info');
   addLog('[MODBUS] Conectando a 192.168.171.188:502...', 'info');
   addLog('[MODBUS] Conexión establecida', 'info');
-  addLog('Modo de operación: Automático', 'info');
-  addLog('Ángulos actualizados: Rotación=0°, Elevación=0°');
 }
 
 function addLog(msg, type = '') {
@@ -474,7 +446,7 @@ function initMap() {
     mapState.tileErrors++;
     if (mapState.tileErrors > 3) {
       showMapState(true, 'Sin conexión',
-        'No se pudieron descargar los mapas. Las coordenadas siguen siendo válidas y el seguidor solar funciona con normalidad.');
+        'No se pudieron descargar los mapas. Las coordenadas siguen siendo válidas para configurar la ubicación del equipo.');
       document.getElementById('mapSource').textContent = 'Mapa no disponible';
     }
   });
@@ -624,9 +596,6 @@ function searchLocation() {
 function applyCoords() {
   const lat = document.getElementById('latInput').value;
   const lon = document.getElementById('lonInput').value;
-  document.getElementById('trackerLat').value = lat;
-  document.getElementById('trackerLon').value = lon;
-  calcSolar();
   showToast(`Coordenadas aplicadas: ${parseFloat(lat).toFixed(4)}, ${parseFloat(lon).toFixed(4)}`);
 }
 
@@ -639,172 +608,6 @@ function openGoogleEarth() {
   const lat = document.getElementById('latInput').value;
   const lon = document.getElementById('lonInput').value;
   window.open(`https://earth.google.com/web/@${lat},${lon},1000a,1000d,35y,0h,45t,0r`, '_blank');
-}
-
-/* ===== SOLAR CALCULATIONS (simplified) ===== */
-function calcSolar() {
-  const lat = parseFloat(document.getElementById('trackerLat').value) || 0;
-  const lon = parseFloat(document.getElementById('trackerLon').value) || 0;
-  const day = parseInt(document.getElementById('trackerDay').value) || 1;
-  const hour = parseFloat(document.getElementById('trackerHour').value) || 12;
-
-  if (bridge) {
-    // Use the canonical Python solar_calcs (same as the native SolarTrackerTab)
-    bridge.computeSolar(lat, lon, day, hour, function (r) {
-      renderSolar(r.hra, r.decl, r.alt, r.az);
-    });
-    return;
-  }
-
-  // Standalone (browser) fallback math
-  const B = (360 / 365) * (day - 81) * (Math.PI / 180);
-  const EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-  const TC = 4 * lon + EoT;
-  const LST = hour + TC / 60;
-  const HRA = 15 * (LST - 12);
-  const decl = 23.45 * Math.sin((360 / 365) * (day - 81) * (Math.PI / 180));
-  const latR = lat * Math.PI / 180;
-  const declR = decl * Math.PI / 180;
-  const hraR = HRA * Math.PI / 180;
-  const sinAlt = Math.sin(latR) * Math.sin(declR) + Math.cos(latR) * Math.cos(declR) * Math.cos(hraR);
-  const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt))) * 180 / Math.PI;
-  const cosAz = (Math.sin(declR) - Math.sin(latR) * sinAlt) / (Math.cos(latR) * Math.cos(alt * Math.PI / 180));
-  const az = Math.acos(Math.max(-1, Math.min(1, cosAz))) * 180 / Math.PI;
-  renderSolar(HRA, decl, alt, HRA > 0 ? 360 - az : az);
-}
-
-function renderSolar(HRA, decl, alt, az) {
-  document.getElementById('resHRA').textContent = HRA.toFixed(2) + '°';
-  document.getElementById('resDec').textContent = decl.toFixed(4) + '°';
-  document.getElementById('resAlt').textContent = alt.toFixed(4) + '°';
-  document.getElementById('resAz').textContent = az.toFixed(4) + '°';
-
-  // Animate sun dot
-  const altRatio = Math.max(0, Math.min(1, (alt + 10) / 100));
-  const hraRatio = Math.max(0, Math.min(1, (HRA + 90) / 180));
-  const dot = document.getElementById('sunDot');
-  if (dot) {
-    dot.style.left = (hraRatio * 100) + '%';
-    dot.style.bottom = (altRatio * 80) + '%';
-  }
-}
-
-/* ===== MANUAL CONTROL ===== */
-function syncAngle(type, val) {
-  val = parseInt(val) || 0;
-  if (type === 'elev') {
-    state.elev = val;
-    document.getElementById('elevSlider').value = val;
-    document.getElementById('elevSpin').value = val;
-    document.getElementById('elevDisplay').textContent = val + '°';
-    document.getElementById('eleVal').textContent = val + '°';
-    document.getElementById('diagMotor2').textContent = val + '°';
-  } else {
-    state.rot = val;
-    document.getElementById('rotSlider').value = val;
-    document.getElementById('rotSpin').value = val;
-    document.getElementById('rotDisplay').textContent = val + '°';
-    document.getElementById('rotVal').textContent = val + '°';
-    document.getElementById('diagMotor1').textContent = val + '°';
-  }
-  draw3D();
-}
-
-function sendManualOrder() {
-  if (bridge) bridge.sendAngles(state.rot, state.elev);
-  addLog(`Ángulos enviados: Rotación=${state.rot}°, Elevación=${state.elev}°`, 'info');
-  showToast(`Orden enviada: Rot=${state.rot}° Elev=${state.elev}°`);
-}
-
-/* ===== 3D VISOR (canvas-based) ===== */
-function draw3D() {
-  const canvas = document.getElementById('visor3dCanvas');
-  if (!canvas) return;
-  const c = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  c.clearRect(0, 0, W, H);
-
-  // Background
-  const bg = c.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0a0f1a');
-  bg.addColorStop(1, '#0d1117');
-  c.fillStyle = bg; c.fillRect(0, 0, W, H);
-
-  // Grid floor
-  c.strokeStyle = 'rgba(88,166,255,0.08)'; c.lineWidth = 1;
-  for (let i = 0; i <= 10; i++) {
-    const x = (i / 10) * W;
-    c.beginPath(); c.moveTo(x, H * 0.5); c.lineTo(W / 2, H * 0.75); c.stroke();
-    const y = H * 0.5 + (i / 10) * H * 0.25;
-    c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
-  }
-
-  const cx = W / 2, cy = H * 0.55;
-  const rotR = (state.rot * Math.PI) / 180;
-  const elevR = (state.elev * Math.PI) / 180;
-
-  // Base platform
-  c.fillStyle = '#21262d'; c.strokeStyle = '#30363d'; c.lineWidth = 2;
-  c.beginPath();
-  c.ellipse(cx, cy + 40, 80, 20, 0, 0, Math.PI * 2);
-  c.fill(); c.stroke();
-
-  // Pole
-  c.fillStyle = '#30363d';
-  c.fillRect(cx - 6, cy - 20, 12, 60);
-
-  // Arm (rotated)
-  c.save();
-  c.translate(cx, cy);
-  c.rotate(rotR);
-  c.fillStyle = '#58a6ff';
-  c.fillRect(-4, -60, 8, 60);
-
-  // Sensor head (elevated)
-  c.save();
-  c.translate(0, -60);
-  c.rotate(-elevR);
-  // Sensor body
-  c.fillStyle = '#1f6feb';
-  c.beginPath();
-  c.roundRect(-20, -8, 40, 16, 4);
-  c.fill();
-  // Sensor dome
-  c.fillStyle = '#58a6ff';
-  c.beginPath();
-  c.arc(0, -8, 12, Math.PI, 0);
-  c.fill();
-  // Glass
-  c.fillStyle = 'rgba(255,255,255,0.15)';
-  c.beginPath();
-  c.arc(0, -8, 9, Math.PI, 0);
-  c.fill();
-  // Sun reflection
-  c.fillStyle = 'rgba(255,220,50,0.6)';
-  c.beginPath();
-  c.arc(-3, -12, 3, 0, Math.PI * 2);
-  c.fill();
-  c.restore();
-  c.restore();
-
-  // Labels
-  c.fillStyle = '#8b949e'; c.font = '11px Segoe UI'; c.textAlign = 'left';
-  c.fillText(`Rot: ${state.rot}°`, 12, H - 28);
-  c.fillText(`Elev: ${state.elev}°`, 12, H - 14);
-
-  // Compass
-  c.save();
-  c.translate(W - 40, 40);
-  c.strokeStyle = '#30363d'; c.lineWidth = 1;
-  c.beginPath(); c.arc(0, 0, 22, 0, Math.PI * 2); c.stroke();
-  c.rotate(rotR);
-  c.fillStyle = '#f78166';
-  c.beginPath(); c.moveTo(0, -18); c.lineTo(4, 0); c.lineTo(-4, 0); c.closePath(); c.fill();
-  c.fillStyle = '#8b949e';
-  c.beginPath(); c.moveTo(0, 18); c.lineTo(4, 0); c.lineTo(-4, 0); c.closePath(); c.fill();
-  c.restore();
-  c.fillStyle = '#8b949e'; c.font = '9px Segoe UI'; c.textAlign = 'center';
-  c.fillText('N', W - 40, 16);
 }
 
 /* ===== DIAGNOSTIC ===== */
@@ -896,13 +699,6 @@ function diagReadRad() {
   }, 300);
 }
 
-function diagSendSetpoints() {
-  if (!state.diagConnected) { showToast('No conectado', 'error'); return; }
-  if (bridge) bridge.sendSetpoints(state.rot, state.elev);
-  diagLog(`[MODBUS] Enviando consignas: Rot=${state.rot}°, Elev=${state.elev}°`, 'info');
-  setTimeout(() => diagLog('[MODBUS] Consignas enviadas correctamente', 'info'), 400);
-}
-
 function toggleAutoRead() {
   state.diagAutoRead = document.getElementById('autoReadCheck').checked;
   if (bridge) bridge.setAutoRead(state.diagAutoRead);
@@ -941,10 +737,10 @@ const DOC_CONTENT = `
 <h1>Prácticas del Banco de Pruebas de Radiación Solar SCADA</h1>
 <h2>Práctica #1 – Evaluación del comportamiento de la irradiancia</h2>
 <p><strong>Alcance:</strong> Explorar el impacto de factores reales del entorno en la medición de radiación solar.</p>
-<p><strong>Objetivo:</strong> Identificar variaciones en la irradiancia captada bajo diferentes condiciones ambientales y horarios usando el modo manual del banco de pruebas.</p>
+<p><strong>Objetivo:</strong> Identificar variaciones en la irradiancia captada bajo diferentes condiciones ambientales y horarios.</p>
 <h3>Procedimiento de laboratorio</h3>
 <ol>
-  <li>Encender el sistema y activar el modo manual en LabVIEW.</li>
+  <li>Encender el sistema y verificar la conexión de lectura.</li>
   <li>Medir irradiancia en zona despejada, parcialmente sombreada y cubierta.</li>
   <li>Repetir el proceso en la mañana, mediodía y tarde.</li>
   <li>Registrar hora, condiciones ambientales y lecturas.</li>
@@ -960,24 +756,24 @@ const DOC_CONTENT = `
   <li>Visualizar mediciones en tiempo real.</li>
 </ol>
 <hr>
-<h2>Práctica #3 – Control manual del piranómetro</h2>
-<p><strong>Objetivo:</strong> Desarrollar habilidades para operar el modo manual y correlacionar orientación con radiación solar.</p>
+<h2>Práctica #3 – Ubicación del equipo</h2>
+<p><strong>Objetivo:</strong> Configurar las coordenadas geográficas del punto de medición.</p>
 <h3>Procedimiento de laboratorio</h3>
 <ol>
-  <li>Encender el sistema y abrir LabVIEW.</li>
-  <li>Seleccionar modo "Manual".</li>
-  <li>Ingresar ángulos de acimut (X) y elevación (Y).</li>
-  <li>Ejecutar movimiento y registrar lecturas.</li>
+  <li>Buscar el sitio de instalación en el mapa.</li>
+  <li>Verificar latitud y longitud.</li>
+  <li>Guardar las coordenadas del equipo.</li>
+  <li>Registrar observaciones del entorno de medición.</li>
 </ol>
 <hr>
-<h2>Práctica #4 – Seguimiento solar automático</h2>
-<p><strong>Objetivo:</strong> Evaluar precisión y comportamiento del algoritmo de seguimiento astronómico implementado.</p>
+<h2>Práctica #4 – Variables meteorológicas Davis</h2>
+<p><strong>Objetivo:</strong> Relacionar radiación solar, temperatura, humedad, presión, viento, lluvia e índice UV.</p>
 <h3>Procedimiento de laboratorio</h3>
 <ol>
-  <li>Encender el sistema y abrir LabVIEW.</li>
-  <li>Ingresar ubicación, fecha y hora.</li>
-  <li>Observar movimiento del sensor.</li>
-  <li>Registrar hora, posición y lectura.</li>
+  <li>Conectar la estación meteorológica.</li>
+  <li>Verificar que las unidades se muestren en el sistema internacional.</li>
+  <li>Comparar cambios de radiación con humedad, nubosidad y viento.</li>
+  <li>Registrar los valores en una tabla de laboratorio.</li>
 </ol>
 <hr>
 <h2>Práctica #5 – Análisis de datos desde la base de datos</h2>

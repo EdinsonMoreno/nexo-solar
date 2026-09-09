@@ -28,6 +28,17 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "irradiance": 4,
         },
     },
+    "davis_weatherlink": {
+        "transport": "serial",
+        "serial_port": "/dev/ttyUSB0",
+        "baud_rate": 19200,
+        "ip_host": "192.168.1.50",
+        "ip_port": 22222,
+        "poll_interval_ms": 5000,
+        "timeout": 5.0,
+        "retry_attempts": 3,
+        "retry_backoff": 1.0,
+    },
     "database": {
         "path": "data/solarsense.db",
         "table_name": "mediciones",

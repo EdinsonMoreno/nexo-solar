@@ -207,7 +207,7 @@ class LoggingService:
 
 ### `modbuspython.backend.angle_state_manager`
 
-Gestiona el estado de ángulos y modos del tracker solar.
+Modulo legado. No forma parte del flujo activo de Nexo Solar porque la estacion objetivo no tiene motores de movimiento.
 
 ```python
 class AngleStateManager(QObject):
@@ -333,7 +333,7 @@ class LocationSetupTab(QWidget):
 
 ### `modbuspython.ui.solar_tracker_tab`
 
-Tab de rastreo solar automático.
+Modulo legado conservado para compatibilidad de pruebas antiguas. No se expone en la interfaz web activa.
 
 ```python
 class SolarTrackerTab(QWidget):
@@ -347,7 +347,7 @@ class SolarTrackerTab(QWidget):
 
 ### `modbuspython.ui.manual_control_panel`
 
-Panel de control manual de ángulos con visor 3D.
+Modulo legado conservado para compatibilidad de pruebas antiguas. No se expone en la interfaz web activa.
 
 ```python
 class ManualControlPanel(QWidget):

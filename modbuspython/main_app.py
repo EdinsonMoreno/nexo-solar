@@ -15,7 +15,6 @@ from PyQt6.QtCore import Qt
 from typing import Optional
 from .ui.web_dashboard import WebDashboard
 from .data_access.modbus_client import ModbusClient as ModbusManager
-from .backend.angle_state_manager import AngleStateManager
 from .ui.splash_screen import SolarSenseSplashScreen
 from .data_access.logging_service import LoggingService
 from .config.config_manager import ConfigurationManager
@@ -35,8 +34,6 @@ class MainWindow(QMainWindow):
         logger: Logging service instance
         modbus_manager: Modbus client for device communication
         tabs: Tab widget containing all application tabs
-        angle_manager: Angle state manager for tracking orientation
-
     Requirements validated: 1.4, 6.2, 10.1, 10.2, 10.3, 10.4, 10.9
     """
 
@@ -58,10 +55,8 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1400, 800)
         self.setStyleSheet("QMainWindow { background: #0d1117; }")
 
-        self.angle_manager = AngleStateManager()
         self._setup_modbus()
         self._setup_dashboard()
-        self.angle_manager.set_mode("auto", source="main_window")
         self.logger.info("MainWindow initialization completed successfully")
 
     def _setup_dashboard(self) -> None:

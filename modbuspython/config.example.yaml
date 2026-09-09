@@ -1,4 +1,4 @@
-# SolarSense SCADA Configuration Example
+# Nexo Solar SCADA Configuration Example
 # Copy this file to config.yaml and adjust values for your environment
 
 # Modbus TCP Communication Settings
@@ -9,13 +9,21 @@ modbus:
   retry_attempts: 3      # Number of retry attempts for failed operations
   retry_backoff: 1.0     # Base delay for exponential backoff in seconds
 
-  # Modbus register addresses - adjust based on your ESP8266 configuration
+  # Modbus register address for the irradiance sensor
   registers:
-    rotation_setpoint: 0   # Register for rotation angle setpoint
-    elevation_setpoint: 1  # Register for elevation angle setpoint
-    rotation_actual: 2     # Register for actual rotation angle
-    elevation_actual: 3    # Register for actual elevation angle
     irradiance: 4          # Register for irradiance reading
+
+# Davis WeatherLink Communication Settings
+davis_weatherlink:
+  transport: "serial"      # "serial" or "ip"
+  serial_port: "/dev/ttyUSB0"
+  baud_rate: 19200
+  ip_host: "192.168.1.50"
+  ip_port: 22222
+  poll_interval_ms: 5000
+  timeout: 5.0
+  retry_attempts: 3
+  retry_backoff: 1.0
 
 # Database Configuration
 database:
@@ -29,13 +37,6 @@ logging:
   file_path: "logs/solarsense.log" # Path to log file
   max_bytes: 10485760              # Maximum log file size (10 MB)
   backup_count: 5                  # Number of backup log files to keep
-
-# Angle Limits - adjust based on your hardware constraints
-angles:
-  rotation_min: 0      # Minimum rotation angle in degrees
-  rotation_max: 360    # Maximum rotation angle in degrees
-  elevation_min: 0     # Minimum elevation angle in degrees
-  elevation_max: 145   # Maximum elevation angle in degrees
 
 # User Interface Settings
 ui:
