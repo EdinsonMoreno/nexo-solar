@@ -40,7 +40,7 @@ Implementación bottom-up del módulo `DavisWeatherLinkReader` en Python/PyQt6, 
 - [ ] 4. Implementar `PacketParser`
   - [ ] 4.1 Implementar `modbuspython/data_access/davis_weatherlink/packet_parser.py`
     - Implementar `parse(packet: bytes) -> WeatherData` con todos los offsets y factores de conversión de la tabla del diseño
-    - Verificar firma LOO (bytes 1–3) y lanzar `DavisProtocolError` si no coincide
+    - Verificar firma LOO (bytes 0–2) y lanzar `DavisProtocolError` si no coincide
     - Implementar `format_weather_data(data: WeatherData) -> str` con etiquetas y unidades
     - Implementar `parse_weather_data(text: str) -> WeatherData` para round-trip
     - _Requisitos: 5.1, 5.2, 5.3, 5.4, 5.5, 9.1, 9.2, 9.3, 9.4, 9.5_
@@ -61,7 +61,7 @@ Implementación bottom-up del módulo `DavisWeatherLinkReader` en Python/PyQt6, 
     - **Valida: Requisitos 5.4, 5.5**
 
   - [ ]* 4.5 Escribir test de propiedad P8 (rechazo de firma LOO inválida) en `tests/test_davis_weatherlink/test_packet_parser.py`
-    - **Propiedad 8: Para todo paquete de 99 bytes con bytes 1–3 ≠ [0x4C, 0x4F, 0x4F], `parse()` debe rechazarlo**
+    - **Propiedad 8: Para todo paquete de 99 bytes con bytes 0–2 ≠ [0x4C, 0x4F, 0x4F], `parse()` debe rechazarlo**
     - `@given(st.binary(min_size=99, max_size=99))` filtrando firma inválida
     - **Valida: Requisito 5.3**
 

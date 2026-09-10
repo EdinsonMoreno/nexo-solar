@@ -17,7 +17,7 @@ def put_int16_le(packet: bytearray, offset: int, value: int) -> None:
 
 def make_loop_packet() -> bytes:
     packet = bytearray(99)
-    packet[1:4] = b"LOO"
+    packet[0:3] = b"LOO"
     put_uint16_le(packet, 7, 29921)
     put_int16_le(packet, 9, 754)
     packet[11] = 45
@@ -60,7 +60,22 @@ def test_packet_parser_decodes_loop_packet_to_si_units() -> None:
 
 def test_packet_parser_rejects_invalid_signature() -> None:
     packet = bytearray(make_loop_packet())
-    packet[1:4] = b"BAD"
+    packet[0:3] = b"BAD"
+
+    with pytest.raises(DavisProtocolError):
+        PacketParser().parse(bytes(packet))
+
+
+def test_packet_parser_accepts_hardware_loop_signature_at_packet_start() -> None:
+    packet = make_loop_packet()
+
+    assert packet[0:3] == b"LOO"
+    assert PacketParser().parse(packet).solar_radiation_wm2 == 925
+
+
+def test_packet_parser_rejects_shifted_loop_signature() -> None:
+    packet = bytearray(make_loop_packet())
+    packet[0:4] = b"\x00LOO"
 
     with pytest.raises(DavisProtocolError):
         PacketParser().parse(bytes(packet))

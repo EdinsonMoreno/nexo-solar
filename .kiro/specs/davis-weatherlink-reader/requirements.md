@@ -93,7 +93,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 #### Criterios de Aceptación
 
 1. WHEN un LOOP_Packet supera la validación CRC, THE `Packet_Parser` SHALL decodificar los campos del paquete según la siguiente tabla de offsets (índice base 0):
-   - Bytes 1–3: firma (`LOO`), verificar que los valores sean `0x4C`, `0x4F`, `0x4F`
+   - Bytes 0–2: firma (`LOO`), verificar que los valores sean `0x4C`, `0x4F`, `0x4F`
    - Bytes 7–8: presión barométrica (uint16 Little Endian, dividir entre 1000 → inHg)
    - Bytes 9–10: temperatura interior (int16 Little Endian, dividir entre 10 → °F)
    - Byte 11: humedad interior (uint8 → % RH)
@@ -110,7 +110,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
    - Bytes 52–53: lluvia del mes (uint16 Little Endian, dividir entre 100 → pulgadas)
    - Bytes 54–55: lluvia del año (uint16 Little Endian, dividir entre 100 → pulgadas)
 2. WHEN el `Packet_Parser` decodifica un LOOP_Packet, THE `Packet_Parser` SHALL producir una estructura `WeatherData` con todos los campos anteriores con sus unidades y factores de conversión aplicados.
-3. IF los bytes 1–3 del LOOP_Packet no contienen los valores `0x4C`, `0x4F`, `0x4F` (firma `LOO`), THEN THE `Packet_Parser` SHALL descartar el paquete y registrar el evento en `LoggingService` con nivel WARNING.
+3. IF los bytes 0–2 del LOOP_Packet no contienen los valores `0x4C`, `0x4F`, `0x4F` (firma `LOO`), THEN THE `Packet_Parser` SHALL descartar el paquete y registrar el evento en `LoggingService` con nivel WARNING.
 4. THE `Packet_Parser` SHALL exponer un método `format_weather_data` que convierta una estructura `WeatherData` de vuelta a una representación de texto estructurada con etiquetas y unidades legibles por humanos.
 5. FOR ALL estructuras `WeatherData` válidas, aplicar `format_weather_data` seguido de `parse_weather_data` SHALL producir una estructura `WeatherData` equivalente a la original (propiedad de round-trip).
 

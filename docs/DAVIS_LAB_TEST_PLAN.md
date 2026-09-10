@@ -34,7 +34,7 @@ de cableado, permisos, protocolo, configuracion o parsing.
 | ACK | Espera `0x06` antes de leer datos | Alineado con respuesta oficial de comandos reconocidos |
 | Paquete LOOP | Lee exactamente 99 bytes | Alineado con formato oficial LOOP |
 | CRC | CRC-CCITT, inicial `0x0000`, MSB primero en bytes de CRC | Test local con ejemplo oficial `C6 CE A2 03 -> E2 B4` |
-| Offsets LOOP | Campos principales en offsets oficiales: barometro 7, temperatura interior 9, humedad interior 11, temperatura exterior 12, viento 14/15/16, humedad exterior 33, lluvia 41, UV 43, solar 44, acumulados lluvia 46/50/52/54 | Pendiente capturar paquete real y comparar contra consola |
+| Offsets LOOP | Campos principales en offsets oficiales: firma `LOO` en 0-2, barometro 7, temperatura interior 9, humedad interior 11, temperatura exterior 12, viento 14/15/16, humedad exterior 33, lluvia 41, UV 43, solar 44, acumulados lluvia 46/50/52/54 | Pendiente capturar paquete real y comparar contra consola |
 | Lluvia | Implementado con `0.01 in` por click por defecto | Pendiente confirmar tipo de colector: `0.01 in` o `0.2 mm` |
 | WeatherLinkIP | TCP crudo `ip_host:22222` con los mismos bytes del protocolo | Alineado con soporte oficial; liberar socket si el logger sube a WeatherLink.com |
 | Unidades | Backend emite SI; UI futura podra mostrar preferencias | Alineado con requerimiento interno; preferencia UI pendiente del rediseño |

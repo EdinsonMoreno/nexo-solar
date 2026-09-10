@@ -63,7 +63,7 @@ def put_int16_le(packet: bytearray, offset: int, value: int) -> None:
 
 def make_loop_packet(outside_temp_tenths_f: int = 863, humidity_out: int = 68) -> bytes:
     packet = bytearray(99)
-    packet[1:4] = b"LOO"
+    packet[0:3] = b"LOO"
     put_uint16_le(packet, 7, 29921)
     put_int16_le(packet, 9, 754)
     packet[11] = 45
@@ -109,7 +109,7 @@ def test_reader_performs_wake_up_loop_read_and_emits_weather_data() -> None:
 
 def test_reader_rejects_out_of_range_weather_data_without_emit() -> None:
     packet = make_loop_packet(outside_temp_tenths_f=2000)
-    reader = make_reader(FakeTransport([b"\r\n", b"\x06", packet]))
+    reader = make_reader(FakeTransport([b"\n\r", b"\x06", packet]))
     readings = []
     retries = []
     reader.weather_data_updated.connect(readings.append)

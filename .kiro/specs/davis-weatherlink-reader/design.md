@@ -267,7 +267,7 @@ class WeatherData:
 
 | Campo | Offset(s) | Tipo | Factor | Unidad salida |
 |---|---|---|---|---|
-| Firma `LOO` | 1–3 | bytes | — | verificación |
+| Firma `LOO` | 0–2 | bytes | — | verificación |
 | Presión barométrica | 7–8 | uint16 LE | ÷1000 → ×33.8639 | hPa |
 | Temperatura interior | 9–10 | int16 LE | ÷10 → °F→°C | °C |
 | Humedad interior | 11 | uint8 | — | % RH |
@@ -627,7 +627,7 @@ El estado seguro (`safe_state = True`) impide emitir `weather_data_updated` hast
 
 ### Propiedad 8: Rechazo de paquetes con firma LOO inválida
 
-*Para todo* buffer de 99 bytes cuyos bytes 1–3 no sean `[0x4C, 0x4F, 0x4F]`, `PacketParser.parse()` debe rechazar el paquete y no producir ningún `WeatherData`.
+*Para todo* buffer de 99 bytes cuyos bytes 0–2 no sean `[0x4C, 0x4F, 0x4F]`, `PacketParser.parse()` debe rechazar el paquete y no producir ningún `WeatherData`.
 
 **Validates: Requirements 5.3**
 
@@ -667,7 +667,7 @@ Cada test de propiedad lleva un comentario con el tag:
 | P5: Validación rangos | `@given(builds(WeatherData, ...))` con un campo fuera de rango — no emite señal | WeatherData con campos extremos |
 | P6: Round-trip WeatherData | `@given(builds(WeatherData, ...))` con campos válidos — format → parse produce equivalente | WeatherData arbitrarios válidos |
 | P7: Transparencia transporte | mock serial + mock IP con mismos bytes — mismo WeatherData emitido | payloads de 99 bytes |
-| P8: Firma inválida | `@given(st.binary(min_size=99, max_size=99))` con bytes 1-3 ≠ [0x4C,0x4F,0x4F] | paquetes con firma incorrecta |
+| P8: Firma inválida | `@given(st.binary(min_size=99, max_size=99))` con bytes 0-2 ≠ [0x4C,0x4F,0x4F] | paquetes con firma incorrecta |
 
 ### Configuración mínima de Hypothesis
 

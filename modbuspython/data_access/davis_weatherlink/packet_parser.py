@@ -14,6 +14,7 @@ class PacketParser:
 
     PACKET_LENGTH = 99
     SIGNATURE = b"LOO"
+    SIGNATURE_OFFSET = 0
 
     def __init__(self, rain_click_inches: float = 0.01) -> None:
         self.rain_click_inches = rain_click_inches
@@ -81,10 +82,12 @@ class PacketParser:
                 "Invalid Davis LOOP packet length",
                 details={"expected": self.PACKET_LENGTH, "actual": len(packet)},
             )
-        if packet[1:4] != self.SIGNATURE:
+        signature_end = self.SIGNATURE_OFFSET + len(self.SIGNATURE)
+        actual_signature = packet[self.SIGNATURE_OFFSET : signature_end]
+        if actual_signature != self.SIGNATURE:
             raise DavisProtocolError(
                 "Invalid Davis LOOP packet signature",
-                details={"expected": self.SIGNATURE.decode("ascii"), "actual": packet[1:4].hex()},
+                details={"expected": self.SIGNATURE.decode("ascii"), "actual": actual_signature.hex()},
             )
 
     @staticmethod
