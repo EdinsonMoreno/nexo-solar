@@ -28,6 +28,14 @@ def make_weather_data(solar: float = 83.0) -> WeatherData:
     )
 
 
+def test_davis_repository_create_table_starts_empty(tmp_path) -> None:
+    repo = DavisWeatherRepository(str(tmp_path / "nexo_solar.db"), use_pool=False)
+
+    repo.create_table()
+
+    assert repo.get_recent() == []
+
+
 def test_davis_repository_creates_table_and_stores_all_weather_fields(tmp_path) -> None:
     repo = DavisWeatherRepository(str(tmp_path / "nexo_solar.db"), use_pool=False)
     repo.create_table()

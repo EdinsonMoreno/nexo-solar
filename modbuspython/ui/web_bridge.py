@@ -237,19 +237,34 @@ class WebBridge(QObject):
         try:
             repo = DavisWeatherRepository(self._write_db_path, use_pool=False)
             repo.create_table()
-            return repo.get_for_hours(int(range_hours), max_rows=2000)
+            return repo.get_for_hours(int(range_hours), max_rows=50000)
         except Exception as e:  # pragma: no cover - defensive
             self.logMessage.emit("SQLITE", "error", f"Error leyendo histórico Davis: {e}")
             return []
 
     @pyqtSlot(str, str, result=bool)
     def configureSqlite(self, db_path: str, table: str) -> bool:
-        """Configure SQLite persistence on the Modbus client."""
+        """Configure SQLite persistence without seeding measurements.
+
+        The legacy irradiance table is created only as an empty destination for
+        Modbus data. Davis readings always use the stable table
+        ``davis_weather_readings`` in the same file.
+        """
         try:
             ok = bool(self.modbus.configurar_sqlite(db_path, table))
             if ok:
                 self._db_path = db_path
                 self._db_table = table
+                self._write_db_path = db_path
+                repo = DavisWeatherRepository(self._write_db_path, use_pool=False)
+                repo.create_table()
+                if self.davis is not None and hasattr(self.davis, "configure_database_path"):
+                    self.davis.configure_database_path(db_path)
+                self.logMessage.emit(
+                    "SQLITE",
+                    "info",
+                    f"Histórico Davis listo en {DavisWeatherRepository.TABLE_NAME} sin datos de prueba",
+                )
             return ok
         except Exception as e:  # pragma: no cover - defensive
             self.logMessage.emit("SQLITE", "error", f"Error configurando SQLite: {e}")

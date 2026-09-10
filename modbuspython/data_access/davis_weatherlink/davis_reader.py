@@ -102,6 +102,18 @@ class DavisWeatherLinkReader(QThread):
             self._runtime_config["poll_interval_ms"] = self.poll_interval_ms
             self._set_config("poll_interval_ms", self.poll_interval_ms)
 
+    def configure_database_path(self, db_path: str) -> None:
+        """Use another SQLite file for future Davis readings.
+
+        The table is created empty. Only valid LOOP readings are inserted later
+        by ``_save_reading``.
+        """
+        self._runtime_config["database_path"] = db_path
+        repository = DavisWeatherRepository(db_path=str(db_path), use_pool=False)
+        repository.create_table()
+        self.weather_repository = repository
+        self.logger.info(f"Davis persistence configured: {db_path} -> {DavisWeatherRepository.TABLE_NAME}")
+
     def connect_station(self) -> bool:
         """Open the configured transport with RetryStrategy."""
         result, success = self._execute_with_retry("Davis Connection", self._connect_once)
@@ -321,6 +333,8 @@ class DavisWeatherLinkReader(QThread):
             self.logger.warning(f"Davis reading was not saved to SQLite: {exc}")
 
     def _get_database_path(self) -> Optional[str]:
+        if "database_path" in self._runtime_config:
+            return str(self._runtime_config["database_path"])
         if self.config is None:
             return str(DEFAULT_CONFIG["database"].get("path", "data/nexo_solar.db"))
         return self.config.get("database.path", DEFAULT_CONFIG["database"].get("path", "data/nexo_solar.db"))

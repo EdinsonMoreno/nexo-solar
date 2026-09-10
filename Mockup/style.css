@@ -258,7 +258,8 @@ button { color: inherit; }
   overflow-wrap: anywhere;
 }
 
-.metric-card small, .kpi-sub, .card-unit, .muted-line { color: var(--muted); font-size: 12px; }
+.metric-card small, .kpi-sub, .card-unit, .muted-line, .card-note { color: var(--muted); font-size: 12px; }
+.card-note { margin-top: 2px; }
 .metric-card.energy { border-left: 5px solid var(--sun); }
 .metric-card.panel { border-left: 5px solid var(--sky); }
 
@@ -292,6 +293,30 @@ button { color: inherit; }
   max-width: 100%;
 }
 
+.chart-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.chart-scroll canvas {
+  display: block;
+  width: auto;
+  max-width: none;
+}
+
+.chart-card .chart-scroll {
+  min-height: 262px;
+}
+
+.chart-module .chart-scroll {
+  min-height: 222px;
+}
+
 .gauge-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -309,6 +334,10 @@ button { color: inherit; }
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.chart-controls {
+  justify-content: flex-end;
 }
 
 .graph-toolbar {

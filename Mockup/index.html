@@ -103,14 +103,20 @@
 
             <section class="card chart-card">
               <div class="card-header">
-                <span class="card-title">Radiación en tiempo real</span>
+                <div>
+                  <span class="card-title">Radiación acumulada</span>
+                  <p class="card-note">Histórico completo de lecturas Davis</p>
+                </div>
                 <div class="chart-controls">
-                  <button class="chip active" onclick="setChartRange(50, this)">50</button>
-                  <button class="chip" onclick="setChartRange(100, this)">100</button>
-                  <button class="chip" onclick="setChartRange(200, this)">200</button>
+                  <button class="btn btn-outline btn-sm" onclick="zoomHomeChart(1)">Zoom +</button>
+                  <button class="btn btn-outline btn-sm" onclick="zoomHomeChart(-1)">Zoom -</button>
+                  <button class="btn btn-outline btn-sm" onclick="resetHomeChartZoom()">Reset</button>
+                  <span class="zoom-label" id="homeChartZoomLabel">100%</span>
                 </div>
               </div>
-              <canvas id="chartCanvas" height="260"></canvas>
+              <div class="chart-scroll" id="homeChartScroll">
+                <canvas id="chartCanvas" height="260"></canvas>
+              </div>
             </section>
 
             <section class="card log-card">
@@ -213,19 +219,71 @@
               <button class="chip range-chip" onclick="setGraphRange(24, this)">24 h</button>
               <button class="chip range-chip" onclick="setGraphRange(168, this)">7 días</button>
               <button class="chip range-chip" onclick="setGraphRange(720, this)">30 días</button>
+              <button class="chip range-chip" onclick="setGraphRange(2160, this)">90 días</button>
               <button class="chip range-chip" onclick="setGraphRange(0, this)">Todo</button>
-              <button class="btn btn-outline btn-sm" onclick="zoomGraphs(1)">Zoom +</button>
-              <button class="btn btn-outline btn-sm" onclick="zoomGraphs(-1)">Zoom -</button>
-              <button class="btn btn-outline btn-sm" onclick="resetGraphZoom()">Reset</button>
-              <span class="zoom-label" id="graphZoomLabel">100%</span>
             </div>
           </div>
           <div class="charts-grid">
-            <section class="card chart-module"><div class="card-header"><span class="card-title">Solar / UV</span></div><canvas id="groupChartSolar" height="220"></canvas></section>
-            <section class="card chart-module"><div class="card-header"><span class="card-title">Temperatura</span></div><canvas id="groupChartTemp" height="220"></canvas></section>
-            <section class="card chart-module"><div class="card-header"><span class="card-title">Humedad / Presión</span></div><canvas id="groupChartHumidity" height="220"></canvas></section>
-            <section class="card chart-module"><div class="card-header"><span class="card-title">Viento</span></div><canvas id="groupChartWind" height="220"></canvas></section>
-            <section class="card chart-module wide"><div class="card-header"><span class="card-title">Lluvia</span></div><canvas id="groupChartRain" height="220"></canvas></section>
+            <section class="card chart-module">
+              <div class="card-header">
+                <div><span class="card-title">Solar / UV / Energía</span><p class="card-note">Acumulado del rango seleccionado</p></div>
+                <div class="chart-controls">
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('solar', 1)">Zoom +</button>
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('solar', -1)">Zoom -</button>
+                  <button class="btn btn-outline btn-sm" onclick="resetGraphZoom('solar')">Reset</button>
+                  <span class="zoom-label" id="graphZoomLabelSolar">100%</span>
+                </div>
+              </div>
+              <div class="chart-scroll" id="groupChartSolarScroll"><canvas id="groupChartSolar" height="220"></canvas></div>
+            </section>
+            <section class="card chart-module">
+              <div class="card-header">
+                <div><span class="card-title">Temperatura</span><p class="card-note">Tendencia acumulada del rango</p></div>
+                <div class="chart-controls">
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('temp', 1)">Zoom +</button>
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('temp', -1)">Zoom -</button>
+                  <button class="btn btn-outline btn-sm" onclick="resetGraphZoom('temp')">Reset</button>
+                  <span class="zoom-label" id="graphZoomLabelTemp">100%</span>
+                </div>
+              </div>
+              <div class="chart-scroll" id="groupChartTempScroll"><canvas id="groupChartTemp" height="220"></canvas></div>
+            </section>
+            <section class="card chart-module">
+              <div class="card-header">
+                <span class="card-title">Humedad / Presión</span>
+                <div class="chart-controls">
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('humidity', 1)">Zoom +</button>
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('humidity', -1)">Zoom -</button>
+                  <button class="btn btn-outline btn-sm" onclick="resetGraphZoom('humidity')">Reset</button>
+                  <span class="zoom-label" id="graphZoomLabelHumidity">100%</span>
+                </div>
+              </div>
+              <div class="chart-scroll" id="groupChartHumidityScroll"><canvas id="groupChartHumidity" height="220"></canvas></div>
+            </section>
+            <section class="card chart-module">
+              <div class="card-header">
+                <span class="card-title">Viento</span>
+                <div class="chart-controls">
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('wind', 1)">Zoom +</button>
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('wind', -1)">Zoom -</button>
+                  <button class="btn btn-outline btn-sm" onclick="resetGraphZoom('wind')">Reset</button>
+                  <span class="zoom-label" id="graphZoomLabelWind">100%</span>
+                </div>
+              </div>
+              <div class="chart-scroll" id="groupChartWindScroll"><canvas id="groupChartWind" height="220"></canvas></div>
+            </section>
+            <section class="card chart-module wide">
+              <div class="card-header">
+                <span class="card-title">Lluvia</span>
+                <div class="chart-controls">
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('rain', 1)">Zoom +</button>
+                  <button class="btn btn-outline btn-sm" onclick="zoomGraph('rain', -1)">Zoom -</button>
+                  <button class="btn btn-outline btn-sm" onclick="resetGraphZoom('rain')">Reset</button>
+                  <span class="zoom-label" id="graphZoomLabelRain">100%</span>
+                </div>
+              </div>
+              <div class="chart-scroll" id="groupChartRainScroll"><canvas id="groupChartRain" height="220"></canvas></div>
+            </section>
           </div>
         </section>
 
@@ -276,8 +334,8 @@
 
         <section class="tab-panel" id="tab-datos">
           <div class="data-banner" id="anaSourceBanner" hidden>
-            <span class="data-banner-tag">Datos de demostración</span>
-            <span class="data-banner-text">Los gráficos de esta pestaña se generan con datos sintéticos, no con mediciones del piranómetro. <span id="anaSourceDetail"></span></span>
+            <span class="data-banner-tag">Sin registros</span>
+            <span class="data-banner-text">La tabla seleccionada no contiene lecturas reales todavía. <span id="anaSourceDetail"></span></span>
           </div>
 
           <div class="analysis-toolbar">
@@ -518,7 +576,7 @@
               <div class="card-header"><span class="card-title">Visualización</span></div>
               <div class="settings-options">
                 <label class="toggle-label"><input type="checkbox" checked /> Compactar tarjetas en pantallas pequeñas</label>
-                <label class="toggle-label"><input type="checkbox" checked /> Mostrar avisos de datos sintéticos</label>
+                <label class="toggle-label"><input type="checkbox" checked /> Mostrar avisos de tablas vacías</label>
                 <label class="toggle-label"><input type="checkbox" /> Reducir animaciones</label>
               </div>
             </section>
@@ -559,8 +617,6 @@
           <label class="field-label">Tabla existente</label>
           <select class="input-field" id="tableSelect">
             <option>-- Seleccionar tabla --</option>
-            <option>solar_data</option>
-            <option>irradiancia_2024</option>
           </select>
         </div>
         <div class="field-group">

@@ -3,8 +3,8 @@ const state = {
   simRunning: true,
   irradiance: 0,
   buffer: [],
-  maxBuffer: 50,
-  chartRange: 50,
+  maxBuffer: 50000,
+  homeChartZoom: 1,
   minVal: Infinity,
   maxVal: -Infinity,
   sumVal: 0,
@@ -15,15 +15,20 @@ const state = {
   davisLastRead: null,
   davisWeather: null,
   davisStatus: null,
-  demoWeatherActive: false,
   lastEnergyAt: null,
   siteEnergyKwhM2: 0,
   panelAreaM2: 1,
   panelEfficiency: 0.18,
   groupHistory: [],
-  maxGroupHistory: 2000,
+  maxGroupHistory: 50000,
   graphRangeHours: 1,
-  graphScale: 1,
+  graphZoom: {
+    solar: 1,
+    temp: 1,
+    humidity: 1,
+    wind: 1,
+    rain: 1,
+  },
   diagUpdateCount: 0,
   docMode: 'html',
 };
@@ -154,20 +159,20 @@ let chartCtx;
 function initChart() {
   const canvas = document.getElementById('chartCanvas');
   chartCtx = canvas.getContext('2d');
-  canvas.width = canvas.parentElement.clientWidth || 600;
+  prepareScrollableCanvas(canvas, state.homeChartZoom, 0);
 }
 
 function drawChart() {
   const canvas = document.getElementById('chartCanvas');
-  canvas.width = canvas.parentElement.clientWidth || 600;
+  const data = state.buffer.filter(value => Number.isFinite(value));
+  const size = prepareScrollableCanvas(canvas, state.homeChartZoom, data.length);
   const c = chartCtx;
-  const W = canvas.width, H = 260;
+  const W = size.width, H = 260;
   c.clearRect(0, 0, W, H);
   const pad = { top: 16, right: 16, bottom: 32, left: 48 };
   const iW = W - pad.left - pad.right;
   const iH = H - pad.top - pad.bottom;
 
-  const data = state.buffer.slice(-state.chartRange);
   const maxY = getHomeChartMax(data);
 
   // Grid
@@ -230,7 +235,7 @@ function drawHomeChartLabel(ctx, width, height) {
   ctx.fillStyle = '#6e7681';
   ctx.font = '10px Segoe UI';
   ctx.textAlign = 'center';
-  ctx.fillText('Lecturas Davis recientes', width / 2, height - 4);
+  ctx.fillText('Histórico acumulado de lecturas Davis', width / 2, height - 4);
 }
 
 function getHomeChartMax(data) {
@@ -245,11 +250,41 @@ function getHomeChartMax(data) {
   return Math.max(2000, Math.ceil(observed / 500) * 500);
 }
 
-function setChartRange(n, btn) {
-  state.chartRange = n;
-  document.querySelectorAll('#tab-inicio .chip').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+function zoomHomeChart(direction) {
+  state.homeChartZoom = clampZoom(state.homeChartZoom + direction * 0.25);
+  setText('homeChartZoomLabel', `${Math.round(state.homeChartZoom * 100)}%`);
   drawChart();
+}
+
+function resetHomeChartZoom() {
+  state.homeChartZoom = 1;
+  setText('homeChartZoomLabel', '100%');
+  drawChart();
+}
+
+function clampZoom(value) {
+  return Math.max(0.5, Math.min(8, value));
+}
+
+function prepareScrollableCanvas(canvas, zoom, sampleCount) {
+  const viewport = canvas.closest('.chart-scroll') || canvas.parentElement;
+  const viewportWidth = Math.max(280, viewport?.clientWidth || canvas.parentElement?.clientWidth || 600);
+  const height = parseInt(canvas.getAttribute('height'), 10) || 220;
+  const step = sampleCount > 1 ? Math.max(3, 7 * zoom) : viewportWidth;
+  const targetWidth = Math.ceil(Math.max(viewportWidth, 72 + Math.max(sampleCount - 1, 1) * step));
+  const keepAtEnd = viewport ? viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 12 : true;
+  const previousLeft = viewport?.scrollLeft || 0;
+
+  canvas.width = targetWidth;
+  canvas.height = height;
+
+  if (viewport) {
+    requestAnimationFrame(() => {
+      viewport.scrollLeft = keepAtEnd ? viewport.scrollWidth : Math.min(previousLeft, viewport.scrollWidth);
+    });
+  }
+
+  return { width: targetWidth, height, viewportWidth };
 }
 
 /* ===== SIMULATION ===== */
@@ -267,21 +302,16 @@ function tick() {
   applyIrradiance(Math.max(0, Math.min(2000, solar + noise)));
 }
 
-// Apply an irradiance reading from EITHER the simulation OR the Python bridge.
+// Apply one irradiance value from the active source. Davis weather rows arrive
+// through updateDavisWeather(); this function must not invent station data.
 function applyIrradiance(value) {
   const cleanValue = normalizeIrradiance(value);
   if (cleanValue === null) return;
   integrateSolarEnergy(cleanValue);
   state.irradiance = cleanValue;
-  if (!state.davisConnected) {
-    const demoWeather = mockWeatherFromIrradiance(cleanValue);
-    state.davisWeather = demoWeather;
-    state.demoWeatherActive = true;
-    pushGroupHistory(demoWeather);
-  }
 
   state.buffer.push(cleanValue);
-  if (state.buffer.length > 200) state.buffer.shift();
+  trimArrayStart(state.buffer, state.maxBuffer);
 
   // Stats
   if (cleanValue < state.minVal) state.minVal = cleanValue;
@@ -306,6 +336,10 @@ function normalizeIrradiance(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.max(0, n);
+}
+
+function trimArrayStart(items, maxLength) {
+  if (items.length > maxLength) items.splice(0, items.length - maxLength);
 }
 
 /* ===== PYTHON BRIDGE (QWebChannel) ===== */
@@ -402,8 +436,8 @@ function setDavisConnectionUI(connected, message) {
 function updateDavisWeather(data) {
   state.davisLastRead = new Date();
   state.davisWeather = data || {};
-  state.demoWeatherActive = false;
   state.davisConnected = true;
+  if (typeof data.solar_radiation_wm2 === 'number') applyIrradiance(data.solar_radiation_wm2);
   pushGroupHistory(state.davisWeather);
   updateDavisStatus({
     connected: true,
@@ -430,7 +464,6 @@ function updateDavisWeather(data) {
   if (last) last.textContent = 'Última lectura: ' + state.davisLastRead.toLocaleTimeString('es-CO', { hour12: false });
   updateHomeSummary();
   drawGroupCharts();
-  if (typeof data.solar_radiation_wm2 === 'number') applyIrradiance(data.solar_radiation_wm2);
 }
 
 function refreshDavisStatus() {
@@ -502,9 +535,7 @@ function updateHomeSummary() {
   if (lastPill) lastPill.textContent = lastLabel;
   if (davisState) davisState.textContent = state.davisConnected ? 'Conectada USB' : 'Sin conexión USB';
   if (davisLast) {
-    davisLast.textContent = state.demoWeatherActive
-      ? 'Datos de demostración'
-      : (state.davisLastRead ? `Última lectura: ${lastLabel}` : 'Sin lectura registrada');
+    davisLast.textContent = state.davisLastRead ? `Última lectura: ${lastLabel}` : 'Sin lectura registrada';
   }
 
   const data = state.davisWeather || {};
@@ -544,8 +575,15 @@ function readDavisOnce() {
 
 function loadDavisHistory() {
   if (!bridge || !bridge.loadDavisHistory) return;
-  bridge.loadDavisHistory(Math.round(state.graphRangeHours), function (rows) {
-    if (!Array.isArray(rows) || !rows.length) return;
+  bridge.loadDavisHistory(0, function (rows) {
+    if (!Array.isArray(rows) || !rows.length) {
+      state.groupHistory = [];
+      state.buffer = [];
+      rebuildIrradianceStats([]);
+      updateMonitorUI();
+      drawGroupCharts();
+      return;
+    }
     state.groupHistory = rows.map(normalizeDavisHistoryRow);
     syncHomeIrradianceFromHistory(state.groupHistory);
     drawGroupCharts();
@@ -570,6 +608,8 @@ function normalizeDavisHistoryRow(row) {
     rainDay: row.rain_day_mm,
     rainMonth: row.rain_month_mm,
     rainYear: row.rain_year_mm,
+    siteEnergy: row.site_energy_kwh_m2,
+    panelEnergy: row.estimated_panel_energy_kwh,
   };
 }
 
@@ -588,7 +628,7 @@ function syncHomeIrradianceFromHistory(rows) {
     .filter(value => value !== null);
   if (!values.length) return;
 
-  state.buffer = values.slice(-200);
+  state.buffer = values.slice(-state.maxBuffer);
   state.irradiance = state.buffer[state.buffer.length - 1];
   rebuildIrradianceStats(state.buffer);
   updateMonitorUI();
@@ -672,6 +712,8 @@ function acceptSQLite() {
       if (ok) {
         addLog(`[SQLite] Base de datos configurada: ${path} → tabla: ${table}`, 'info');
         showToast('Base de datos configurada correctamente');
+        populateTableSelect();
+        loadDavisHistory();
       } else {
         addLog('[SQLite] Error configurando la base de datos', 'error');
         showToast('Error configurando SQLite', 'error');
@@ -1142,7 +1184,7 @@ const DOC_CONTENT = `
 <h3>Procedimiento de laboratorio</h3>
 <ol>
   <li>Abrir software de SQLite y cargar base de datos.</li>
-  <li>Navegar a la tabla <code>solar_data</code>.</li>
+  <li>Navegar a la tabla configurada para la práctica.</li>
   <li>Exportar datos como archivo <code>.csv</code>.</li>
   <li>Abrir en Excel o Google Sheets y calcular estadísticas.</li>
 </ol>
@@ -1193,29 +1235,6 @@ function initGroupCharts() {
   drawGroupCharts();
 }
 
-function mockWeatherFromIrradiance(irradiance) {
-  const hour = new Date().getHours() + new Date().getMinutes() / 60;
-  const daylight = Math.max(0, Math.sin(Math.PI * (hour - 6) / 12));
-  const breeze = 1.2 + Math.random() * 2.4;
-  return {
-    solar_radiation_wm2: irradiance,
-    uv_index: Math.min(12, daylight * 8 + Math.random()),
-    temp_out_c: 22 + daylight * 8 + (Math.random() - 0.5) * 1.4,
-    temp_in_c: 24 + (Math.random() - 0.5),
-    humidity_out: 76 - daylight * 26 + Math.random() * 8,
-    humidity_in: 58 + Math.random() * 5,
-    pressure_hpa: 1012 + Math.sin(Date.now() / 1800000) * 2,
-    wind_speed_ms: breeze,
-    wind_speed_avg_ms: breeze * 0.82,
-    wind_dir_deg: (Date.now() / 20000) % 360,
-    rain_rate_mm: 0,
-    rain_storm_mm: 0,
-    rain_day_mm: 0,
-    rain_month_mm: 12.4,
-    rain_year_mm: 284.8,
-  };
-}
-
 function pushGroupHistory(data) {
   const row = {
     t: new Date(),
@@ -1233,38 +1252,67 @@ function pushGroupHistory(data) {
     rainDay: data.rain_day_mm,
     rainMonth: data.rain_month_mm,
     rainYear: data.rain_year_mm,
+    siteEnergy: state.siteEnergyKwhM2,
+    panelEnergy: state.siteEnergyKwhM2 * state.panelAreaM2 * state.panelEfficiency,
   };
   state.groupHistory.push(row);
-  if (state.groupHistory.length > state.maxGroupHistory) state.groupHistory.shift();
+  trimArrayStart(state.groupHistory, state.maxGroupHistory);
 }
 
 function drawGroupCharts() {
-  if (!state.groupHistory.length) return;
   const rows = getVisibleGroupRows();
+  const solarRows = buildSolarEnergyRows(rows);
   drawMultiLineChart('groupChartSolar', groupCharts.solar, [
     { key: 'solar', label: 'Radiación W/m²', color: '#ffb703' },
     { key: 'uv', label: 'UV x100', color: '#2563eb', scale: 100 },
-  ], 1400, rows);
+    { key: 'siteEnergy', label: 'Energía kWh/m² x10000', color: '#16a34a', scale: 10000 },
+    { key: 'panelEnergy', label: 'Panel kWh x10000', color: '#0f766e', scale: 10000 },
+  ], {
+    chartId: 'solar',
+    rows: solarRows,
+    includeZero: true,
+    emptyMessage: 'Esperando datos solares Davis',
+  });
   drawMultiLineChart('groupChartTemp', groupCharts.temp, [
     { key: 'tempOut', label: 'Exterior °C', color: '#ef4444' },
     { key: 'tempIn', label: 'Interior °C', color: '#16a34a' },
-  ], 50, rows);
+  ], {
+    chartId: 'temp',
+    rows,
+    includeZero: false,
+    emptyMessage: 'Esperando temperaturas Davis',
+  });
   drawMultiLineChart('groupChartHumidity', groupCharts.humidity, [
     { key: 'humidityOut', label: 'Humedad ext %', color: '#0891b2' },
     { key: 'humidityIn', label: 'Humedad int %', color: '#22c55e' },
     { key: 'pressure', label: 'Presión hPa - 950', color: '#7c3aed', offset: 950 },
-  ], 110, rows);
+  ], {
+    chartId: 'humidity',
+    rows,
+    includeZero: true,
+    emptyMessage: 'Esperando humedad y presión',
+  });
   drawMultiLineChart('groupChartWind', groupCharts.wind, [
     { key: 'wind', label: 'Viento m/s', color: '#0f766e' },
     { key: 'windAvg', label: 'Promedio m/s', color: '#84cc16' },
     { key: 'windDir', label: 'Dirección /12', color: '#f97316', scale: 1 / 12 },
-  ], 30, rows);
+  ], {
+    chartId: 'wind',
+    rows,
+    includeZero: true,
+    emptyMessage: 'Esperando datos de viento',
+  });
   drawMultiLineChart('groupChartRain', groupCharts.rain, [
     { key: 'rainRate', label: 'Tasa mm', color: '#2563eb' },
     { key: 'rainDay', label: 'Día mm', color: '#06b6d4' },
     { key: 'rainMonth', label: 'Mes mm /2', color: '#16a34a', scale: 0.5 },
     { key: 'rainYear', label: 'Año mm /20', color: '#f59e0b', scale: 0.05 },
-  ], 100, rows);
+  ], {
+    chartId: 'rain',
+    rows,
+    includeZero: true,
+    emptyMessage: 'Esperando datos de lluvia',
+  });
 }
 
 function setGraphRange(hours, btn) {
@@ -1275,36 +1323,50 @@ function setGraphRange(hours, btn) {
   drawGroupCharts();
 }
 
-function zoomGraphs(direction) {
-  state.graphScale = Math.max(0.25, Math.min(4, state.graphScale + direction * 0.25));
-  setText('graphZoomLabel', `${Math.round(state.graphScale * 100)}%`);
+function zoomGraph(chartId, direction) {
+  if (!state.graphZoom[chartId]) return;
+  state.graphZoom[chartId] = clampZoom(state.graphZoom[chartId] + direction * 0.25);
+  updateGraphZoomLabel(chartId);
   drawGroupCharts();
 }
 
-function resetGraphZoom() {
-  state.graphScale = 1;
-  setText('graphZoomLabel', '100%');
+function resetGraphZoom(chartId) {
+  if (!state.graphZoom[chartId]) return;
+  state.graphZoom[chartId] = 1;
+  updateGraphZoomLabel(chartId);
   drawGroupCharts();
+}
+
+function updateGraphZoomLabel(chartId) {
+  const labelIds = {
+    solar: 'graphZoomLabelSolar',
+    temp: 'graphZoomLabelTemp',
+    humidity: 'graphZoomLabelHumidity',
+    wind: 'graphZoomLabelWind',
+    rain: 'graphZoomLabelRain',
+  };
+  setText(labelIds[chartId], `${Math.round(state.graphZoom[chartId] * 100)}%`);
 }
 
 function getVisibleGroupRows() {
   if (state.graphRangeHours === 0) return state.groupHistory.slice();
   const since = Date.now() - state.graphRangeHours * 3600000;
   const rows = state.groupHistory.filter(row => row.t && row.t.getTime() >= since);
-  return rows.length ? rows : state.groupHistory.slice(-80);
+  return rows.length ? rows : [];
 }
 
-function drawMultiLineChart(canvasId, ctx, series, maxY, rows) {
+function drawMultiLineChart(canvasId, ctx, series, options = {}) {
   const canvas = document.getElementById(canvasId);
   if (!canvas || !ctx) return;
-  const width = canvas.parentElement.clientWidth || 520;
+  const rows = options.rows || state.groupHistory;
+  const zoom = state.graphZoom[options.chartId] || 1;
+  const size = prepareScrollableCanvas(canvas, zoom, rows.length);
+  const width = size.width;
   const height = parseInt(canvas.getAttribute('height'), 10) || 220;
-  canvas.width = width;
   const pad = { top: 24, right: 18, bottom: 28, left: 48 };
   const chartW = width - pad.left - pad.right;
   const chartH = height - pad.top - pad.bottom;
-  const visibleRows = (rows || state.groupHistory).slice(-240);
-  const adjustedMaxY = maxY / state.graphScale;
+  const axis = getChartAxis(rows, series, options.includeZero !== false);
 
   ctx.clearRect(0, 0, width, height);
   ctx.strokeStyle = '#d9e2d0';
@@ -1318,27 +1380,32 @@ function drawMultiLineChart(canvasId, ctx, series, maxY, rows) {
     ctx.fillStyle = '#5d6757';
     ctx.font = '10px Segoe UI';
     ctx.textAlign = 'right';
-    ctx.fillText(Math.round(adjustedMaxY - (i / 4) * adjustedMaxY), pad.left - 6, y + 3);
+    ctx.fillText(formatAxisValue(axis.max - (i / 4) * (axis.max - axis.min)), pad.left - 6, y + 3);
   }
 
-  if (visibleRows.length < 2) {
+  if (!rows.length) {
     ctx.fillStyle = '#697463';
     ctx.font = '12px Segoe UI';
     ctx.textAlign = 'center';
-    ctx.fillText('Esperando lecturas', width / 2, height / 2);
+    ctx.fillText(options.emptyMessage || 'Esperando lecturas', Math.min(width / 2, size.viewportWidth / 2), height / 2);
     return;
   }
 
   series.forEach((item) => {
     ctx.beginPath();
-    visibleRows.forEach((row, i) => {
-      const raw = row[item.key];
-      const shifted = Number.isFinite(raw) ? raw - (item.offset || 0) : 0;
-      const value = Math.max(0, shifted * (item.scale || 1));
-      const x = pad.left + (i / (visibleRows.length - 1)) * chartW;
-      const y = pad.top + (1 - Math.min(value, adjustedMaxY) / adjustedMaxY) * chartH;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    let hasPoint = false;
+    rows.forEach((row, i) => {
+      const value = transformSeriesValue(row[item.key], item);
+      if (value === null) return;
+      const x = rows.length === 1 ? pad.left + chartW / 2 : pad.left + (i / (rows.length - 1)) * chartW;
+      const y = pad.top + (1 - (value - axis.min) / (axis.max - axis.min)) * chartH;
+      hasPoint ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      if (rows.length === 1) {
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+      }
+      hasPoint = true;
     });
+    if (!hasPoint) return;
     ctx.strokeStyle = item.color;
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -1356,6 +1423,64 @@ function drawMultiLineChart(canvasId, ctx, series, maxY, rows) {
   });
 }
 
+function buildSolarEnergyRows(rows) {
+  let siteEnergy = 0;
+  let lastTime = null;
+  return rows.map((row) => {
+    const copy = { ...row };
+    const solar = normalizeIrradiance(row.solar);
+    const currentTime = row.t instanceof Date ? row.t.getTime() : null;
+    if (solar !== null && lastTime !== null && currentTime !== null) {
+      const elapsedHours = Math.max(0, Math.min((currentTime - lastTime) / 3600000, 1 / 12));
+      siteEnergy += solar * elapsedHours / 1000;
+    }
+    if (currentTime !== null) lastTime = currentTime;
+    copy.siteEnergy = Number.isFinite(row.siteEnergy) ? row.siteEnergy : siteEnergy;
+    copy.panelEnergy = Number.isFinite(row.panelEnergy)
+      ? row.panelEnergy
+      : copy.siteEnergy * state.panelAreaM2 * state.panelEfficiency;
+    return copy;
+  });
+}
+
+function getChartAxis(rows, series, includeZero) {
+  const values = [];
+  rows.forEach(row => {
+    series.forEach(item => {
+      const value = transformSeriesValue(row[item.key], item);
+      if (value !== null) values.push(value);
+    });
+  });
+
+  if (!values.length) return { min: 0, max: 1 };
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (includeZero) min = Math.min(0, min);
+  if (min === max) {
+    const pad = Math.max(1, Math.abs(max) * 0.1);
+    min -= includeZero ? 0 : pad;
+    max += pad;
+  } else {
+    const pad = (max - min) * 0.12;
+    min = includeZero ? Math.min(0, min) : min - pad;
+    max += pad;
+  }
+  return { min, max };
+}
+
+function transformSeriesValue(raw, item) {
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return null;
+  const shifted = value - (item.offset || 0);
+  return shifted * (item.scale || 1);
+}
+
+function formatAxisValue(value) {
+  if (Math.abs(value) >= 100) return Math.round(value).toString();
+  if (Math.abs(value) >= 10) return value.toFixed(1);
+  return value.toFixed(2);
+}
+
 /* ===== RESIZE ===== */
 window.addEventListener('resize', () => {
   drawChart();
@@ -1365,39 +1490,6 @@ window.addEventListener('resize', () => {
 /* ============================================================
    ANÁLISIS DE DATOS
    ============================================================ */
-
-/* ----- Generación de datos mock de BD ----- */
-function generateMockDB(days = 126) {
-  const rows = [];
-  const start = new Date('2025-01-01');
-  let id = 1;
-  for (let d = 0; d < days; d++) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + d);
-    const dateStr = date.toISOString().slice(0, 10);
-    // Registros cada 5 minutos de 6:00 a 18:00 → 144 registros/día
-    for (let m = 0; m < 144; m++) {
-      const totalMin = 360 + m * 5;
-      const h = Math.floor(totalMin / 60);
-      const min = totalMin % 60;
-      const hourFrac = h + min / 60;
-      // 1050 W/m2 de pico: por encima de eso la irradiancia a nivel de suelo
-      // deja de ser fisicamente creible (la constante solar es 1361 W/m2 fuera
-      // de la atmosfera). Datos sinteticos, pero no absurdos.
-      const solar = Math.max(0, Math.sin(Math.PI * (hourFrac - 6) / 12) * 1050);
-      const cloud = Math.random() > 0.85 ? Math.random() * 0.6 : 0;
-      const noise = (Math.random() - 0.5) * 80;
-      const irr = Math.max(0, solar * (1 - cloud) + noise);
-      rows.push({
-        id: id++,
-        fecha: dateStr,
-        hora: `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`,
-        irradiancia: parseFloat(irr.toFixed(2)),
-      });
-    }
-  }
-  return rows;
-}
 
 let anaData = [];
 let anaFiltered = [];
@@ -1428,7 +1520,10 @@ function populateTableSelect() {
   const sel = document.getElementById('anaTableSelect');
   if (!sel || !bridge) return;
   bridge.listTables(function (tables) {
-    if (!tables || !tables.length) return;
+    if (!tables || !tables.length) {
+      sel.innerHTML = '<option value="">Sin tablas de irradiancia</option>';
+      return;
+    }
     sel.innerHTML = '';
     tables.forEach(t => {
       const o = document.createElement('option');
@@ -1455,12 +1550,15 @@ function loadAnalysisData() {
     if (!anaDatesTouched && rows.length) {
       document.getElementById('anaDateFrom').value = rows[0].fecha;
       document.getElementById('anaDateTo').value = rows[rows.length - 1].fecha;
+    } else if (!anaDatesTouched) {
+      document.getElementById('anaDateFrom').value = '';
+      document.getElementById('anaDateTo').value = '';
     }
     applyDateFilter();
     icon.textContent = '⬇';
     btn.disabled = false;
     setAnalysisSource(fromBackend, notice);
-    showToast(`${anaData.length.toLocaleString()} registros cargados${fromBackend ? ' (base de datos)' : ' (demostración)'}`);
+    showToast(`${anaData.length.toLocaleString()} registros cargados${fromBackend ? ' (base de datos)' : ''}`);
   };
 
   if (bridge) {
@@ -1476,38 +1574,44 @@ function loadAnalysisData() {
       }
       if (res && res.ok === false) {
         addLog(`[Análisis] Error al leer la base: ${res.error}`, 'error');
-        finish(generateMockDB(126), false,
+        finish([], false,
           `No se pudo leer la tabla «${res.table}»: ${res.error}`);
       } else {
-        addLog('[Análisis] La base no tiene registros; se muestran datos de demostración', 'warn');
-        finish(generateMockDB(126), false,
+        addLog('[Análisis] La tabla está vacía; esperando registros reales de la estación', 'info');
+        finish([], true,
           `La tabla «${(res && res.table) || '—'}» no tiene registros todavía.`);
       }
     });
     return;
   }
 
-  // Sin bridge (abierto directo en un navegador): siempre demostración.
-  setTimeout(() => finish(generateMockDB(126), false,
-    'Vista abierta fuera de la aplicación, sin acceso a la base de datos.'), 700);
+  setTimeout(() => finish([], false,
+    'Vista abierta fuera de la aplicación, sin acceso a la base de datos.'), 200);
 }
 
-/** Aviso PERMANENTE mientras haya datos sintéticos en pantalla.
- *  Un toast de 3 segundos no alcanza: estos gráficos son indistinguibles
- *  de los reales y no se pueden mostrar sin decir de dónde salen. */
+/** Aviso permanente para estados vacios o errores de lectura. */
 function setAnalysisSource(fromBackend, notice) {
   const el = document.getElementById('anaSourceBanner');
   if (!el) return;
-  if (fromBackend) { el.setAttribute('hidden', ''); return; }
+  if (fromBackend && !notice) { el.setAttribute('hidden', ''); return; }
   document.getElementById('anaSourceDetail').textContent = notice || '';
   el.removeAttribute('hidden');
 }
 
 function applyDateFilter() {
-  if (!anaData.length) { loadAnalysisData(); return; }
+  if (!anaData.length) {
+    anaFiltered = [];
+    anaPage = 0;
+    renderAll();
+    return;
+  }
   const from = document.getElementById('anaDateFrom').value;
   const to   = document.getElementById('anaDateTo').value;
-  anaFiltered = anaData.filter(r => r.fecha >= from && r.fecha <= to);
+  anaFiltered = anaData.filter(r => {
+    const afterStart = !from || r.fecha >= from;
+    const beforeEnd = !to || r.fecha <= to;
+    return afterStart && beforeEnd;
+  });
   anaPage = 0;
   renderAll();
 }
@@ -1519,6 +1623,18 @@ function renderAll() {
   drawHeatmap();
   drawHourlyChart();
   renderTable();
+}
+
+function drawEmptyAnalysisCanvas(canvasId, ctx, message) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !ctx) return;
+  canvas.width = canvas.parentElement.clientWidth || 600;
+  const height = parseInt(canvas.getAttribute('height'), 10) || 220;
+  ctx.clearRect(0, 0, canvas.width, height);
+  ctx.fillStyle = '#697463';
+  ctx.font = '12px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText(message, canvas.width / 2, height / 2);
 }
 
 /* ----- KPIs ----- */
@@ -1542,13 +1658,22 @@ function samplingMinutes(rows) {
 }
 
 function updateKPIs() {
-  if (!anaFiltered.length) return;
+  if (!anaFiltered.length) {
+    document.getElementById('kpiMax').textContent = '-- W/m²';
+    document.getElementById('kpiMaxDate').textContent = '--';
+    document.getElementById('kpiAvg').textContent = '-- W/m²';
+    document.getElementById('kpiAvgSub').textContent = 'sin muestras';
+    document.getElementById('kpiEnergy').textContent = '-- kWh/m²';
+    document.getElementById('kpiStd').textContent = '-- W/m²';
+    document.getElementById('kpiCount').textContent = '0';
+    document.getElementById('kpiCountSub').textContent = 'en espera de registros';
+    return;
+  }
   const vals = anaFiltered.map(r => r.irradiancia);
   const max  = Math.max(...vals);
   const avg  = vals.reduce((a,b) => a+b, 0) / vals.length;
-  // El intervalo de muestreo NO es fijo: el histórico de campo se tomó cada
-  // ~2 s y el generador sintético cada 5 min. Asumir 5 min sobreestimaba la
-  // energía unas 150 veces, así que se deduce de los propios datos.
+  // El intervalo de muestreo no es fijo; se deduce de los propios datos para
+  // estimar energia sin asumir una frecuencia de adquisicion.
   const energy = (avg * anaFiltered.length * (samplingMinutes(anaFiltered)/60) / 1000).toFixed(1);
   const std  = Math.sqrt(vals.reduce((a,b) => a + (b-avg)**2, 0) / vals.length);
   const maxRow = anaFiltered.find(r => r.irradiancia === max);
@@ -1576,7 +1701,10 @@ function setAnaView(v, btn) {
 }
 
 function drawHistChart() {
-  if (!anaFiltered.length) return;
+  if (!anaFiltered.length) {
+    drawEmptyAnalysisCanvas('anaHistChart', anaHistCtx, 'Sin registros para graficar');
+    return;
+  }
   const canvas = document.getElementById('anaHistChart');
   canvas.width = canvas.parentElement.clientWidth || 700;
   const c = anaHistCtx;
@@ -1664,7 +1792,10 @@ function drawHistChart() {
 
 /* ----- Distribución por rangos ----- */
 function drawDistChart() {
-  if (!anaFiltered.length) return;
+  if (!anaFiltered.length) {
+    drawEmptyAnalysisCanvas('anaDistChart', anaDistCtx, 'Sin distribución todavía');
+    return;
+  }
   const canvas = document.getElementById('anaDistChart');
   canvas.width = canvas.parentElement.clientWidth || 380;
   const c = anaDistCtx;
@@ -1742,7 +1873,10 @@ function drawDistChart() {
 
 /* ----- Heatmap hora × día de semana ----- */
 function drawHeatmap() {
-  if (!anaFiltered.length) return;
+  if (!anaFiltered.length) {
+    drawEmptyAnalysisCanvas('anaHeatmap', anaHeatCtx, 'Sin datos por hora');
+    return;
+  }
   const canvas = document.getElementById('anaHeatmap');
   canvas.width = canvas.parentElement.clientWidth || 700;
   const c = anaHeatCtx;
@@ -1827,7 +1961,10 @@ function heatColor(ratio) {
 
 /* ----- Promedio por hora del día ----- */
 function drawHourlyChart() {
-  if (!anaFiltered.length) return;
+  if (!anaFiltered.length) {
+    drawEmptyAnalysisCanvas('anaHourlyChart', anaHourCtx, 'Sin promedio horario');
+    return;
+  }
   const canvas = document.getElementById('anaHourlyChart');
   canvas.width = canvas.parentElement.clientWidth || 380;
   const c = anaHourCtx;
@@ -1907,6 +2044,13 @@ function renderTablePage() {
   const slice = tableFiltered.slice(start, start + ANA_PAGE_SIZE);
   const total = tableFiltered.length;
   const pages = Math.ceil(total / ANA_PAGE_SIZE);
+
+  if (!total) {
+    tbody.innerHTML = '<tr><td colspan="5">Sin registros. La tabla empezará a llenarse con lecturas reales de la estación.</td></tr>';
+    document.getElementById('tableCount').textContent = 'mostrando 0 de 0';
+    document.getElementById('pageInfo').textContent = 'Página 1 de 1';
+    return;
+  }
 
   tbody.innerHTML = slice.map(r => {
     const q = r.irradiancia > 50 ? 'Good' : r.irradiancia > 0 ? 'Warn' : 'Bad';
