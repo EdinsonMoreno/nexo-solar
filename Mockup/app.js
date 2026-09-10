@@ -92,11 +92,11 @@ function initGauge() {
 
 function drawGauge(value) {
   const c = gaugeCtx;
-  const W = 320, H = 200;
+  const canvas = document.getElementById('gaugeCanvas');
+  const W = canvas.width, H = canvas.height;
   c.clearRect(0, 0, W, H);
   const cx = W / 2, cy = H - 20;
-  const r = 130;
-  const startA = Math.PI, endA = 0;
+  const r = Math.min(130, W / 2 - 28, H - 42);
 
   // Track background
   c.beginPath();
@@ -142,11 +142,11 @@ function drawGauge(value) {
   const needleA = Math.PI + ratio * Math.PI;
   const nx = cx + (r - 30) * Math.cos(needleA), ny = cy + (r - 30) * Math.sin(needleA);
   c.beginPath(); c.moveTo(cx, cy); c.lineTo(nx, ny);
-  c.lineWidth = 3; c.strokeStyle = '#fff'; c.lineCap = 'round'; c.stroke();
+  c.lineWidth = 4; c.strokeStyle = '#17211b'; c.lineCap = 'round'; c.stroke();
 
   // Center dot
   c.beginPath(); c.arc(cx, cy, 7, 0, Math.PI * 2);
-  c.fillStyle = '#58a6ff'; c.fill();
+  c.fillStyle = '#1f6feb'; c.fill();
 }
 
 /* ===== CHART ===== */
@@ -167,18 +167,33 @@ function drawChart() {
   const iW = W - pad.left - pad.right;
   const iH = H - pad.top - pad.bottom;
 
+  const data = state.buffer.slice(-state.chartRange);
+  const maxY = getHomeChartMax(data);
+
   // Grid
   c.strokeStyle = '#21262d'; c.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = pad.top + (i / 4) * iH;
     c.beginPath(); c.moveTo(pad.left, y); c.lineTo(W - pad.right, y); c.stroke();
-    const val = Math.round(2000 - (i / 4) * 2000);
+    const val = Math.round(maxY - (i / 4) * maxY);
     c.fillStyle = '#6e7681'; c.font = '10px Segoe UI'; c.textAlign = 'right';
     c.fillText(val, pad.left - 6, y + 4);
   }
 
-  const data = state.buffer.slice(-state.chartRange);
-  if (data.length < 2) return;
+  if (!data.length) {
+    drawEmptyHomeChart(c, W, H, 'Esperando lecturas Davis');
+    return;
+  }
+
+  if (data.length === 1) {
+    const y = pad.top + (1 - Math.min(data[0], maxY) / maxY) * iH;
+    c.beginPath();
+    c.arc(pad.left + iW / 2, y, 4, 0, Math.PI * 2);
+    c.fillStyle = '#1f6feb';
+    c.fill();
+    drawHomeChartLabel(c, W, H);
+    return;
+  }
 
   // Gradient fill
   const grad = c.createLinearGradient(0, pad.top, 0, H - pad.bottom);
@@ -188,10 +203,10 @@ function drawChart() {
   c.beginPath();
   data.forEach((v, i) => {
     const x = pad.left + (i / (data.length - 1)) * iW;
-    const y = pad.top + (1 - v / 2000) * iH;
+    const y = pad.top + (1 - Math.min(v, maxY) / maxY) * iH;
     i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
   });
-  c.strokeStyle = '#58a6ff'; c.lineWidth = 2; c.stroke();
+  c.strokeStyle = '#1f6feb'; c.lineWidth = 2; c.stroke();
 
   // Fill
   const lastX = pad.left + iW, firstX = pad.left;
@@ -200,9 +215,34 @@ function drawChart() {
   c.closePath();
   c.fillStyle = grad; c.fill();
 
-  // X axis label
-  c.fillStyle = '#6e7681'; c.font = '10px Segoe UI'; c.textAlign = 'center';
-  c.fillText('Muestras', W / 2, H - 4);
+  drawHomeChartLabel(c, W, H);
+}
+
+function drawEmptyHomeChart(ctx, width, height, message) {
+  ctx.fillStyle = '#697463';
+  ctx.font = '12px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText(message, width / 2, height / 2);
+  drawHomeChartLabel(ctx, width, height);
+}
+
+function drawHomeChartLabel(ctx, width, height) {
+  ctx.fillStyle = '#6e7681';
+  ctx.font = '10px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText('Lecturas Davis recientes', width / 2, height - 4);
+}
+
+function getHomeChartMax(data) {
+  const values = data.filter(v => Number.isFinite(v) && v >= 0);
+  if (Number.isFinite(state.irradiance) && state.irradiance >= 0) values.push(state.irradiance);
+  const observed = values.length ? Math.max(...values) : 100;
+  if (observed <= 80) return 100;
+  if (observed <= 160) return 200;
+  if (observed <= 400) return 500;
+  if (observed <= 800) return 1000;
+  if (observed <= 1200) return 1400;
+  return Math.max(2000, Math.ceil(observed / 500) * 500);
 }
 
 function setChartRange(n, btn) {
@@ -229,22 +269,24 @@ function tick() {
 
 // Apply an irradiance reading from EITHER the simulation OR the Python bridge.
 function applyIrradiance(value) {
-  integrateSolarEnergy(value);
-  state.irradiance = value;
+  const cleanValue = normalizeIrradiance(value);
+  if (cleanValue === null) return;
+  integrateSolarEnergy(cleanValue);
+  state.irradiance = cleanValue;
   if (!state.davisConnected) {
-    const demoWeather = mockWeatherFromIrradiance(value);
+    const demoWeather = mockWeatherFromIrradiance(cleanValue);
     state.davisWeather = demoWeather;
     state.demoWeatherActive = true;
     pushGroupHistory(demoWeather);
   }
 
-  state.buffer.push(value);
+  state.buffer.push(cleanValue);
   if (state.buffer.length > 200) state.buffer.shift();
 
   // Stats
-  if (value < state.minVal) state.minVal = value;
-  if (value > state.maxVal) state.maxVal = value;
-  state.sumVal += value; state.countVal++;
+  if (cleanValue < state.minVal) state.minVal = cleanValue;
+  if (cleanValue > state.maxVal) state.maxVal = cleanValue;
+  state.sumVal += cleanValue; state.countVal++;
 
   updateMonitorUI();
   updateHomeSummary();
@@ -258,6 +300,12 @@ function integrateSolarEnergy(value) {
     state.siteEnergyKwhM2 += Math.max(value, 0) * elapsedHours / 1000;
   }
   state.lastEnergyAt = now;
+}
+
+function normalizeIrradiance(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, n);
 }
 
 /* ===== PYTHON BRIDGE (QWebChannel) ===== */
@@ -499,6 +547,7 @@ function loadDavisHistory() {
   bridge.loadDavisHistory(Math.round(state.graphRangeHours), function (rows) {
     if (!Array.isArray(rows) || !rows.length) return;
     state.groupHistory = rows.map(normalizeDavisHistoryRow);
+    syncHomeIrradianceFromHistory(state.groupHistory);
     drawGroupCharts();
   });
 }
@@ -531,6 +580,32 @@ function updateMonitorUI() {
   document.getElementById('statMin').textContent = state.minVal === Infinity ? '0' : state.minVal.toFixed(0);
   document.getElementById('statMax').textContent = state.maxVal === -Infinity ? '0' : state.maxVal.toFixed(0);
   document.getElementById('statAvg').textContent = state.countVal ? (state.sumVal / state.countVal).toFixed(0) : '0';
+}
+
+function syncHomeIrradianceFromHistory(rows) {
+  const values = rows
+    .map(row => normalizeIrradiance(row.solar))
+    .filter(value => value !== null);
+  if (!values.length) return;
+
+  state.buffer = values.slice(-200);
+  state.irradiance = state.buffer[state.buffer.length - 1];
+  rebuildIrradianceStats(state.buffer);
+  updateMonitorUI();
+  updateHomeSummary();
+}
+
+function rebuildIrradianceStats(values) {
+  state.minVal = Infinity;
+  state.maxVal = -Infinity;
+  state.sumVal = 0;
+  state.countVal = 0;
+  values.forEach(value => {
+    if (value < state.minVal) state.minVal = value;
+    if (value > state.maxVal) state.maxVal = value;
+    state.sumVal += value;
+    state.countVal += 1;
+  });
 }
 
 function toggleSimulation() {
