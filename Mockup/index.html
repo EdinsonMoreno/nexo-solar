@@ -147,7 +147,7 @@
             <div class="status-card compact">
               <div class="led yellow" id="davisLed"></div>
               <div>
-                <strong id="davisState">Pendiente de conexión</strong>
+                <strong id="davisState">Desconectada</strong>
                 <span id="davisLastRead">Última lectura: --</span>
               </div>
             </div>
@@ -207,7 +207,18 @@
               <p class="eyeline">Gráficas</p>
               <h2>Tendencias por grupos de parámetros</h2>
             </div>
-            <span class="muted-line">Canvas local, sin dependencias nuevas</span>
+            <div class="graph-toolbar">
+              <button class="chip range-chip active" onclick="setGraphRange(1, this)">1 h</button>
+              <button class="chip range-chip" onclick="setGraphRange(6, this)">6 h</button>
+              <button class="chip range-chip" onclick="setGraphRange(24, this)">24 h</button>
+              <button class="chip range-chip" onclick="setGraphRange(168, this)">7 días</button>
+              <button class="chip range-chip" onclick="setGraphRange(720, this)">30 días</button>
+              <button class="chip range-chip" onclick="setGraphRange(0, this)">Todo</button>
+              <button class="btn btn-outline btn-sm" onclick="zoomGraphs(1)">Zoom +</button>
+              <button class="btn btn-outline btn-sm" onclick="zoomGraphs(-1)">Zoom -</button>
+              <button class="btn btn-outline btn-sm" onclick="resetGraphZoom()">Reset</button>
+              <span class="zoom-label" id="graphZoomLabel">100%</span>
+            </div>
           </div>
           <div class="charts-grid">
             <section class="card chart-module"><div class="card-header"><span class="card-title">Solar / UV</span></div><canvas id="groupChartSolar" height="220"></canvas></section>
@@ -358,14 +369,27 @@
         <section class="tab-panel" id="tab-diagnostico">
           <div class="diag-grid">
             <section class="card diag-status-card">
-              <div class="card-header"><span class="card-title">Estado del sistema</span></div>
+              <div class="card-header"><span class="card-title">Davis USB</span></div>
               <div class="led-row">
-                <div class="led-item"><div class="led green" id="diagLedConn"></div><span>Conexión</span></div>
-                <div class="led-item"><div class="led red" id="diagLedSensor"></div><span>Sensor</span></div>
+                <div class="led-item"><div class="led red" id="diagDavisLed"></div><span>Estación</span></div>
               </div>
               <button class="btn btn-secondary full-width" onclick="runDiagnostic()">Diagnóstico automático</button>
 
-              <div class="divider-title">Modbus</div>
+              <div class="diag-data-grid compact-diagnostic-grid">
+                <div class="diag-data-item"><span class="diag-data-label">Transporte</span><span class="diag-data-val" id="diagDavisTransport">USB serial</span></div>
+                <div class="diag-data-item"><span class="diag-data-label">Puerto</span><span class="diag-data-val" id="diagDavisPort">/dev/ttyUSB0</span></div>
+                <div class="diag-data-item"><span class="diag-data-label">Estado</span><span class="diag-data-val" id="diagDavisState">Desconectada</span></div>
+                <div class="diag-data-item"><span class="diag-data-label">Calidad</span><span class="diag-data-val" id="diagDavisQuality">Sin lectura válida</span></div>
+                <div class="diag-data-item"><span class="diag-data-label">Última lectura</span><span class="diag-data-val" id="diagDavisLast">--</span></div>
+                <div class="diag-data-item"><span class="diag-data-label">Lecturas guardadas</span><span class="diag-data-val" id="diagDavisCount">0</span></div>
+                <div class="diag-data-item wide"><span class="diag-data-label">Último error</span><span class="diag-data-val" id="diagDavisError">--</span></div>
+              </div>
+              <div class="diag-actions">
+                <button class="btn btn-secondary" onclick="diagReadDavis()">Leer Davis ahora</button>
+                <button class="btn btn-outline" onclick="refreshDavisStatus()">Actualizar estado</button>
+              </div>
+
+              <div class="divider-title">Modbus / ESP8266 opcional</div>
               <div class="field-group">
                 <label class="field-label">IP ESP8266</label>
                 <input type="text" class="input-field" id="diagIP" value="192.168.171.188" />
@@ -375,6 +399,10 @@
                 <input type="number" class="input-field" id="diagPort" value="502" />
               </div>
               <button class="btn btn-primary full-width" id="diagConnBtn" onclick="toggleDiagConn()">Conectar</button>
+              <div class="led-row">
+                <div class="led-item"><div class="led red" id="diagLedConn"></div><span>Modbus</span></div>
+                <div class="led-item"><div class="led red" id="diagLedSensor"></div><span>Sensor Modbus</span></div>
+              </div>
               <div class="state-row safe-state-row">
                 <div class="led green" id="diagSafeStateLed"></div>
                 <span class="state-text" id="diagSafeStateText">Estado: Normal</span>
@@ -383,11 +411,11 @@
             </section>
 
             <section class="card diag-data-card">
-              <div class="card-header"><span class="card-title">Datos en tiempo real</span></div>
+              <div class="card-header"><span class="card-title">Lectura Davis actual</span></div>
               <div class="diag-data-grid">
-                <div class="diag-data-item highlight"><span class="diag-data-label">Radiación solar</span><span class="diag-data-val large" id="diagRad">0.00 W/m²</span></div>
-                <div class="diag-data-item"><span class="diag-data-label">Estado</span><span class="diag-data-val" id="diagEstado">Desconectado</span></div>
-                <div class="diag-data-item"><span class="diag-data-label">Calidad</span><span class="diag-data-val" id="diagQuality">Bad</span></div>
+                <div class="diag-data-item highlight"><span class="diag-data-label">Radiación solar</span><span class="diag-data-val large" id="diagDavisSolar">-- W/m²</span></div>
+                <div class="diag-data-item"><span class="diag-data-label">Estado Modbus</span><span class="diag-data-val" id="diagEstado">Desconectado</span></div>
+                <div class="diag-data-item"><span class="diag-data-label">Calidad Modbus</span><span class="diag-data-val" id="diagQuality">Sin lectura</span></div>
                 <div class="diag-data-item"><span class="diag-data-label">Timestamp</span><span class="diag-data-val" id="diagTimestamp">--</span></div>
                 <div class="diag-data-item"><span class="diag-data-label">Update count</span><span class="diag-data-val" id="diagUpdateCount">0</span></div>
               </div>

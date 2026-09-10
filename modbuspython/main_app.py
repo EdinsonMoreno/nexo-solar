@@ -298,7 +298,7 @@ def main() -> int:
     splash = NexoSolarSplashScreen()
     splash.show()
     app.processEvents()
-    # Paleta personalizada estilo LabVIEW
+    # Paleta base de escritorio; la interfaz principal vive en QWebEngine.
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window, QColor(188, 190, 192))
     palette.setColor(QPalette.ColorRole.Base, QColor(224, 224, 224))

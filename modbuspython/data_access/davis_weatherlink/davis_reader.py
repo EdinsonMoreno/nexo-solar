@@ -10,6 +10,7 @@ from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from ...config.config_defaults import DEFAULT_CONFIG
 from ...exceptions import DavisConnectionError, DavisProtocolError, DavisTransportError
 from ..logging_service import LoggingService
+from ..repositories.davis_weather_repository import DavisWeatherRepository
 from ..retry_strategy import RetryStrategy
 from .crc_validator import CRCValidator
 from .packet_parser import PacketParser
@@ -47,6 +48,7 @@ class DavisWeatherLinkReader(QThread):
         self.is_running = False
         self.last_reading: Optional[WeatherData] = None
         self.last_error = ""
+        self.read_count = 0
 
         self.poll_interval_ms = int(self._get_config("poll_interval_ms", 5000))
         retry_attempts = int(self._get_config("retry_attempts", 3))
@@ -58,6 +60,7 @@ class DavisWeatherLinkReader(QThread):
             backoff_factor=2.0,
             max_delay=30.0,
         )
+        self.weather_repository = self._build_weather_repository()
 
     def run(self) -> None:
         """Create the polling timer and start the thread event loop."""
@@ -144,6 +147,9 @@ class DavisWeatherLinkReader(QThread):
         data, success = self._execute_with_retry("Davis LOOP Read", self._read_cycle)
         if success and data is not None:
             self.last_reading = data
+            self.read_count += 1
+            self._save_reading(data)
+            self._set_connection(True)
             self.weather_data_updated.emit(data)
             self.logger.debug(
                 "Davis LOOP decoded: "
@@ -290,6 +296,34 @@ class DavisWeatherLinkReader(QThread):
         if self.is_connected != connected:
             self.is_connected = connected
             self.connection_changed.emit(connected)
+
+    def _build_weather_repository(self) -> Optional[DavisWeatherRepository]:
+        db_path = self._get_database_path()
+        if not db_path:
+            return None
+        try:
+            repository = DavisWeatherRepository(db_path=str(db_path), use_pool=False)
+            repository.create_table()
+            return repository
+        except Exception as exc:
+            self.last_error = str(exc)
+            self.logger.warning(f"Davis persistence disabled: {exc}")
+            return None
+
+    def _save_reading(self, data: WeatherData) -> None:
+        if self.weather_repository is None:
+            return
+        try:
+            source = "davis_usb" if str(self._get_config("transport", "serial")).lower() == "serial" else "davis_ip"
+            self.weather_repository.insert_reading(data, quality="valid", source=source)
+        except Exception as exc:
+            self.last_error = str(exc)
+            self.logger.warning(f"Davis reading was not saved to SQLite: {exc}")
+
+    def _get_database_path(self) -> Optional[str]:
+        if self.config is None:
+            return str(DEFAULT_CONFIG["database"].get("path", "data/nexo_solar.db"))
+        return self.config.get("database.path", DEFAULT_CONFIG["database"].get("path", "data/nexo_solar.db"))
 
     def _get_config(self, key: str, default):
         if key in self._runtime_config:

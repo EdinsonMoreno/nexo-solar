@@ -14,13 +14,16 @@ const state = {
   davisConnected: false,
   davisLastRead: null,
   davisWeather: null,
+  davisStatus: null,
   demoWeatherActive: false,
   lastEnergyAt: null,
   siteEnergyKwhM2: 0,
   panelAreaM2: 1,
   panelEfficiency: 0.18,
   groupHistory: [],
-  maxGroupHistory: 180,
+  maxGroupHistory: 2000,
+  graphRangeHours: 1,
+  graphScale: 1,
   diagUpdateCount: 0,
   docMode: 'html',
 };
@@ -60,6 +63,7 @@ function switchTab(name) {
   }
 
   if (name === 'graficas') {
+    loadDavisHistory();
     drawGroupCharts();
   }
 }
@@ -205,6 +209,7 @@ function setChartRange(n, btn) {
   state.chartRange = n;
   document.querySelectorAll('#tab-inicio .chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  drawChart();
 }
 
 /* ===== SIMULATION ===== */
@@ -275,12 +280,15 @@ function initBridge() {
       bridge.safeStateChanged.connect(setSafeStateUI);
       if (bridge.davisWeatherUpdated) bridge.davisWeatherUpdated.connect(updateDavisWeather);
       if (bridge.davisConnectionChanged) bridge.davisConnectionChanged.connect(setDavisConnectionUI);
+      if (bridge.davisStatusUpdated) bridge.davisStatusUpdated.connect(updateDavisStatus);
       if (bridge.davisRetryExhausted) {
         bridge.davisRetryExhausted.connect(function (operation, error) {
           setDavisConnectionUI(false, `${operation}: ${error}`);
         });
       }
       addLog('[SISTEMA] Conectado al backend (bridge activo)', 'info');
+      refreshDavisStatus();
+      loadDavisHistory();
     });
     return true;
   } catch (e) {
@@ -339,6 +347,7 @@ function setDavisConnectionUI(connected, message) {
   if (led) led.className = 'led ' + (connected ? 'green' : 'red');
   if (text) text.textContent = message || (connected ? 'Conectado' : 'Desconectado');
   if (btn) btn.disabled = !!connected;
+  updateDavisDiagnostic();
   updateHomeSummary();
 }
 
@@ -346,7 +355,14 @@ function updateDavisWeather(data) {
   state.davisLastRead = new Date();
   state.davisWeather = data || {};
   state.demoWeatherActive = false;
+  state.davisConnected = true;
   pushGroupHistory(state.davisWeather);
+  updateDavisStatus({
+    connected: true,
+    read_count: Math.max((state.davisStatus?.read_count || 0) + 1, state.groupHistory.length),
+    last_error: '',
+    last_reading: state.davisWeather,
+  });
   setDavisValue('weatherSolar', data.solar_radiation_wm2, ' W/m²', 0);
   setDavisValue('weatherTempOut', data.temp_out_c, ' °C', 1);
   setDavisValue('weatherTempIn', data.temp_in_c, ' °C', 1);
@@ -367,6 +383,30 @@ function updateDavisWeather(data) {
   updateHomeSummary();
   drawGroupCharts();
   if (typeof data.solar_radiation_wm2 === 'number') applyIrradiance(data.solar_radiation_wm2);
+}
+
+function refreshDavisStatus() {
+  if (!bridge || !bridge.getDavisStatus) return;
+  bridge.getDavisStatus(function (status) {
+    updateDavisStatus(status || {});
+    if (status && status.last_reading && Object.keys(status.last_reading).length) {
+      updateDavisWeather(status.last_reading);
+    }
+  });
+}
+
+function updateDavisStatus(status) {
+  state.davisStatus = { ...(state.davisStatus || {}), ...(status || {}) };
+  if (typeof state.davisStatus.connected === 'boolean') {
+    state.davisConnected = state.davisStatus.connected;
+  }
+  const led = document.getElementById('davisLed');
+  const text = document.getElementById('davisState');
+  const isSerial = (state.davisStatus?.transport || 'serial') === 'serial';
+  if (led) led.className = 'led ' + (state.davisConnected ? 'green' : 'red');
+  if (text) text.textContent = state.davisConnected ? (isSerial ? 'Conectada por USB' : 'Conectada por IP') : 'Desconectada';
+  updateDavisDiagnostic();
+  updateHomeSummary();
 }
 
 function setDavisValue(id, value, unit, digits) {
@@ -412,7 +452,7 @@ function updateHomeSummary() {
     ? state.davisLastRead.toLocaleTimeString('es-CO', { hour12: false })
     : '--';
   if (lastPill) lastPill.textContent = lastLabel;
-  if (davisState) davisState.textContent = state.davisConnected ? 'Conectada' : 'Pendiente';
+  if (davisState) davisState.textContent = state.davisConnected ? 'Conectada USB' : 'Sin conexión USB';
   if (davisLast) {
     davisLast.textContent = state.demoWeatherActive
       ? 'Datos de demostración'
@@ -454,6 +494,36 @@ function readDavisOnce() {
   if (bridge && bridge.readDavisOnce) bridge.readDavisOnce();
 }
 
+function loadDavisHistory() {
+  if (!bridge || !bridge.loadDavisHistory) return;
+  bridge.loadDavisHistory(Math.round(state.graphRangeHours), function (rows) {
+    if (!Array.isArray(rows) || !rows.length) return;
+    state.groupHistory = rows.map(normalizeDavisHistoryRow);
+    drawGroupCharts();
+  });
+}
+
+function normalizeDavisHistoryRow(row) {
+  return {
+    t: row.timestamp ? new Date(row.timestamp) : new Date(),
+    solar: row.solar_radiation_wm2,
+    uv: row.uv_index,
+    tempOut: row.temp_out_c,
+    tempIn: row.temp_in_c,
+    humidityOut: row.humidity_out,
+    humidityIn: row.humidity_in,
+    pressure: row.pressure_hpa,
+    wind: row.wind_speed_ms,
+    windAvg: row.wind_speed_avg_ms,
+    windDir: row.wind_dir_deg,
+    rainRate: row.rain_rate_mm,
+    rainStorm: row.rain_storm_mm,
+    rainDay: row.rain_day_mm,
+    rainMonth: row.rain_month_mm,
+    rainYear: row.rain_year_mm,
+  };
+}
+
 function updateMonitorUI() {
   document.getElementById('irradDisplay').textContent = state.irradiance.toFixed(2);
   drawGauge(state.irradiance);
@@ -474,8 +544,6 @@ function toggleSimulation() {
 /* ===== LOG ===== */
 function initLog() {
   addLog('[SISTEMA] Nexo Solar iniciado correctamente', 'info');
-  addLog('[MODBUS] Conectando a 192.168.171.188:502...', 'info');
-  addLog('[MODBUS] Conexión establecida', 'info');
 }
 
 function addLog(msg, type = '') {
@@ -796,7 +864,7 @@ function openGoogleEarth() {
 /* ===== DIAGNOSTIC ===== */
 function initDiagLog() {
   diagLog('[SISTEMA] Módulo de diagnóstico listo', 'info');
-  diagLog('[MODBUS] Esperando conexión...', 'warn');
+  diagLog('[DAVIS USB] Esperando lectura de la estación...', 'warn');
 }
 
 function diagLog(msg, type = '') {
@@ -859,17 +927,52 @@ function updateDiagUI() {
   document.getElementById('diagUpdateCount').textContent = state.diagUpdateCount;
 }
 
+function updateDavisDiagnostic() {
+  const status = state.davisStatus || {};
+  const data = state.davisWeather || status.last_reading || {};
+  const transport = status.transport || document.getElementById('davisTransport')?.value || 'serial';
+  const isSerial = transport === 'serial';
+  setText('diagDavisTransport', isSerial ? 'USB serial' : 'IP');
+  setText('diagDavisPort', isSerial ? (status.serial_port || '--') : `${status.ip_host || '--'}:${status.ip_port || '--'}`);
+  setText('diagDavisState', state.davisConnected ? 'Conectada' : 'Desconectada');
+  setText('diagDavisQuality', state.davisConnected && data.solar_radiation_wm2 !== undefined ? 'Lectura válida' : 'Sin lectura válida');
+  setText('diagDavisLast', state.davisLastRead ? state.davisLastRead.toLocaleTimeString('es-CO', { hour12: false }) : '--');
+  setText('diagDavisCount', String(status.read_count || state.groupHistory.length || 0));
+  setText('diagDavisError', status.last_error || '--');
+  setText('diagDavisSolar', fmtValue(data.solar_radiation_wm2, 0) + ' W/m²');
+  const led = document.getElementById('diagDavisLed');
+  if (led) led.className = 'led ' + (state.davisConnected ? 'green' : 'red');
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
 function runDiagnostic() {
   diagLog('[DIAG] Iniciando diagnóstico automático...', 'info');
   setTimeout(() => {
-    const ok = state.diagConnected;
-    document.getElementById('diagLedConn').className = 'led ' + (ok ? 'green' : 'red');
-    document.getElementById('diagLedSensor').className = 'led ' + (ok ? 'green' : 'yellow');
-    diagLog(`[DIAG] Conexión: ${ok ? 'OK' : 'FALLO'}`, ok ? 'info' : 'error');
-    diagLog(`[DIAG] Sensor: ${ok ? 'Activo' : 'Sin datos'}`, ok ? 'info' : 'warn');
+    refreshDavisStatus();
+    const ok = state.davisConnected && !!state.davisWeather;
+    const led = document.getElementById('diagDavisLed');
+    if (led) led.className = 'led ' + (ok ? 'green' : 'yellow');
+    diagLog(`[DIAG] Davis USB: ${state.davisConnected ? 'conectada' : 'sin conexión'}`, state.davisConnected ? 'info' : 'warn');
+    diagLog(`[DIAG] Lecturas Davis: ${state.groupHistory.length}`, state.groupHistory.length ? 'info' : 'warn');
     diagLog('[DIAG] Diagnóstico completado', 'info');
     showToast('Diagnóstico completado');
   }, 800);
+}
+
+function diagReadDavis() {
+  if (!state.davisConnected) {
+    showToast('Davis USB no conectada', 'error');
+    diagLog('[DAVIS USB] Lectura cancelada: estación no conectada', 'error');
+    return;
+  }
+  if (bridge && bridge.readDavisOnce) {
+    bridge.readDavisOnce();
+    diagLog('[DAVIS USB] Lectura LOOP solicitada', 'info');
+  }
 }
 
 function diagReadRad() {
@@ -930,13 +1033,13 @@ const DOC_CONTENT = `
 </ol>
 <hr>
 <h2>Práctica #2 – Visualización de datos en tiempo real</h2>
-<p><strong>Objetivo:</strong> Familiarizar al estudiante con LabVIEW para análisis e interpretación de datos solares.</p>
+<p><strong>Objetivo:</strong> Familiarizar al estudiante con Nexo Solar para análisis e interpretación de datos meteorológicos.</p>
 <h3>Procedimiento de laboratorio</h3>
 <ol>
-  <li>Conectar Arduino UNO vía Wi-Fi.</li>
-  <li>Verificar protocolo TCP.</li>
-  <li>Cargar interfaz en LabVIEW y presionar "Conectar".</li>
-  <li>Visualizar mediciones en tiempo real.</li>
+  <li>Conectar el datalogger Davis por USB.</li>
+  <li>Verificar el puerto serial configurado.</li>
+  <li>Abrir Nexo Solar y presionar "Conectar".</li>
+  <li>Visualizar mediciones en tiempo real y revisar el diagnóstico Davis USB.</li>
 </ol>
 <hr>
 <h2>Práctica #3 – Ubicación del equipo</h2>
@@ -1062,33 +1165,61 @@ function pushGroupHistory(data) {
 
 function drawGroupCharts() {
   if (!state.groupHistory.length) return;
+  const rows = getVisibleGroupRows();
   drawMultiLineChart('groupChartSolar', groupCharts.solar, [
-    { key: 'solar', label: 'Radiación W/m²', color: '#ffb703', max: 1400 },
-    { key: 'uv', label: 'UV x100', color: '#2563eb', max: 1400, scale: 100 },
-  ], 1400);
+    { key: 'solar', label: 'Radiación W/m²', color: '#ffb703' },
+    { key: 'uv', label: 'UV x100', color: '#2563eb', scale: 100 },
+  ], 1400, rows);
   drawMultiLineChart('groupChartTemp', groupCharts.temp, [
-    { key: 'tempOut', label: 'Exterior °C', color: '#ef4444', max: 50 },
-    { key: 'tempIn', label: 'Interior °C', color: '#16a34a', max: 50 },
-  ], 50);
+    { key: 'tempOut', label: 'Exterior °C', color: '#ef4444' },
+    { key: 'tempIn', label: 'Interior °C', color: '#16a34a' },
+  ], 50, rows);
   drawMultiLineChart('groupChartHumidity', groupCharts.humidity, [
-    { key: 'humidityOut', label: 'Humedad ext %', color: '#0891b2', max: 110 },
-    { key: 'humidityIn', label: 'Humedad int %', color: '#22c55e', max: 110 },
-    { key: 'pressure', label: 'Presión hPa - 950', color: '#7c3aed', max: 110, offset: 950 },
-  ], 110);
+    { key: 'humidityOut', label: 'Humedad ext %', color: '#0891b2' },
+    { key: 'humidityIn', label: 'Humedad int %', color: '#22c55e' },
+    { key: 'pressure', label: 'Presión hPa - 950', color: '#7c3aed', offset: 950 },
+  ], 110, rows);
   drawMultiLineChart('groupChartWind', groupCharts.wind, [
-    { key: 'wind', label: 'Viento m/s', color: '#0f766e', max: 30 },
-    { key: 'windAvg', label: 'Promedio m/s', color: '#84cc16', max: 30 },
-    { key: 'windDir', label: 'Dirección /12', color: '#f97316', max: 30, scale: 1 / 12 },
-  ], 30);
+    { key: 'wind', label: 'Viento m/s', color: '#0f766e' },
+    { key: 'windAvg', label: 'Promedio m/s', color: '#84cc16' },
+    { key: 'windDir', label: 'Dirección /12', color: '#f97316', scale: 1 / 12 },
+  ], 30, rows);
   drawMultiLineChart('groupChartRain', groupCharts.rain, [
-    { key: 'rainRate', label: 'Tasa mm', color: '#2563eb', max: 100 },
-    { key: 'rainDay', label: 'Día mm', color: '#06b6d4', max: 100 },
-    { key: 'rainMonth', label: 'Mes mm /2', color: '#16a34a', max: 100, scale: 0.5 },
-    { key: 'rainYear', label: 'Año mm /20', color: '#f59e0b', max: 100, scale: 0.05 },
-  ], 100);
+    { key: 'rainRate', label: 'Tasa mm', color: '#2563eb' },
+    { key: 'rainDay', label: 'Día mm', color: '#06b6d4' },
+    { key: 'rainMonth', label: 'Mes mm /2', color: '#16a34a', scale: 0.5 },
+    { key: 'rainYear', label: 'Año mm /20', color: '#f59e0b', scale: 0.05 },
+  ], 100, rows);
 }
 
-function drawMultiLineChart(canvasId, ctx, series, maxY) {
+function setGraphRange(hours, btn) {
+  state.graphRangeHours = hours;
+  document.querySelectorAll('#tab-graficas .range-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  loadDavisHistory();
+  drawGroupCharts();
+}
+
+function zoomGraphs(direction) {
+  state.graphScale = Math.max(0.25, Math.min(4, state.graphScale + direction * 0.25));
+  setText('graphZoomLabel', `${Math.round(state.graphScale * 100)}%`);
+  drawGroupCharts();
+}
+
+function resetGraphZoom() {
+  state.graphScale = 1;
+  setText('graphZoomLabel', '100%');
+  drawGroupCharts();
+}
+
+function getVisibleGroupRows() {
+  if (state.graphRangeHours === 0) return state.groupHistory.slice();
+  const since = Date.now() - state.graphRangeHours * 3600000;
+  const rows = state.groupHistory.filter(row => row.t && row.t.getTime() >= since);
+  return rows.length ? rows : state.groupHistory.slice(-80);
+}
+
+function drawMultiLineChart(canvasId, ctx, series, maxY, rows) {
   const canvas = document.getElementById(canvasId);
   if (!canvas || !ctx) return;
   const width = canvas.parentElement.clientWidth || 520;
@@ -1097,7 +1228,8 @@ function drawMultiLineChart(canvasId, ctx, series, maxY) {
   const pad = { top: 24, right: 18, bottom: 28, left: 48 };
   const chartW = width - pad.left - pad.right;
   const chartH = height - pad.top - pad.bottom;
-  const rows = state.groupHistory.slice(-80);
+  const visibleRows = (rows || state.groupHistory).slice(-240);
+  const adjustedMaxY = maxY / state.graphScale;
 
   ctx.clearRect(0, 0, width, height);
   ctx.strokeStyle = '#d9e2d0';
@@ -1111,10 +1243,10 @@ function drawMultiLineChart(canvasId, ctx, series, maxY) {
     ctx.fillStyle = '#5d6757';
     ctx.font = '10px Segoe UI';
     ctx.textAlign = 'right';
-    ctx.fillText(Math.round(maxY - (i / 4) * maxY), pad.left - 6, y + 3);
+    ctx.fillText(Math.round(adjustedMaxY - (i / 4) * adjustedMaxY), pad.left - 6, y + 3);
   }
 
-  if (rows.length < 2) {
+  if (visibleRows.length < 2) {
     ctx.fillStyle = '#697463';
     ctx.font = '12px Segoe UI';
     ctx.textAlign = 'center';
@@ -1124,12 +1256,12 @@ function drawMultiLineChart(canvasId, ctx, series, maxY) {
 
   series.forEach((item) => {
     ctx.beginPath();
-    rows.forEach((row, i) => {
+    visibleRows.forEach((row, i) => {
       const raw = row[item.key];
       const shifted = Number.isFinite(raw) ? raw - (item.offset || 0) : 0;
       const value = Math.max(0, shifted * (item.scale || 1));
-      const x = pad.left + (i / (rows.length - 1)) * chartW;
-      const y = pad.top + (1 - Math.min(value, item.max || maxY) / (item.max || maxY)) * chartH;
+      const x = pad.left + (i / (visibleRows.length - 1)) * chartW;
+      const y = pad.top + (1 - Math.min(value, adjustedMaxY) / adjustedMaxY) * chartH;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
     ctx.strokeStyle = item.color;

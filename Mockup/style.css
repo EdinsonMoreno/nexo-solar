@@ -311,6 +311,24 @@ button { color: inherit; }
   flex-wrap: wrap;
 }
 
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: min(100%, 760px);
+}
+
+.zoom-label {
+  min-width: 48px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .chip {
   min-height: 30px;
   padding: 5px 11px;
@@ -348,6 +366,7 @@ button { color: inherit; }
 .btn-outline:hover { border-color: var(--sena); color: var(--sena-dark); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .full-width { width: 100%; }
+.btn-sm { min-height: 30px; padding: 5px 10px; font-size: 12px; }
 .hidden { display: none !important; }
 
 .icon-btn {
@@ -685,6 +704,8 @@ button { color: inherit; }
 }
 
 .diag-data-item.highlight { grid-column: 1 / 3; border-left: 5px solid var(--sky); }
+.diag-data-item.wide { grid-column: 1 / 3; }
+.compact-diagnostic-grid { grid-template-columns: 1fr; margin-top: 14px; }
 .diag-data-val.large { color: var(--sky); font-size: 24px; }
 
 .settings-options {
@@ -834,6 +855,9 @@ button { color: inherit; }
   .date-range-row .input-field, .table-tools .input-field, #anaTableSelect { width: 100%; }
   .db-source-row, .date-range-row, .table-tools, .doc-actions, .input-row { align-items: stretch; }
   .db-source-row > *, .date-range-row > *, .table-tools > *, .doc-actions > *, .input-row > * { width: 100%; }
+  .graph-toolbar { justify-content: flex-start; }
+  .graph-toolbar .chip, .graph-toolbar .btn { flex: 1 1 auto; }
+  .diag-data-item.wide { grid-column: auto; }
   .toast { right: 16px; bottom: 16px; }
 }
 

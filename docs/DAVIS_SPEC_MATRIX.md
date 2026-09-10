@@ -47,6 +47,9 @@ pendientes de validacion en laboratorio antes de pasar a QA funcional.
 | 11 | Validar rangos antes de emitir | `DavisWeatherLinkReader._validate_ranges()` | Cubierto por test Qt de lector, omitido en este entorno por falta de PyQt6 | Implementado; prueba Qt pendiente en entorno completo |
 | 12 | Manejo de errores de puerto serie y cierre en error | `SerialTransport`, `DavisWeatherLinkReader.stop()` | `test_davis_weatherlink_transport.py`; cierre cubierto por test Qt omitido por falta de PyQt6 | Parcial por falta de PyQt6 y puerto real |
 | 13 | Integracion con `ConfigurationManager` y `config.yaml` | Defaults, schema, propiedad `davis_weatherlink_config` y acceso por `config.get()` | Validacion JSON y tests de factory con config simulada | Completo local |
+| 14 | Persistir lecturas meteorologicas para analisis historico | `DavisWeatherRepository` crea `davis_weather_readings` y `DavisWeatherLinkReader` guarda cada lectura valida desde backend | `test_davis_weather_repository.py` cubre creacion, insercion y consulta reciente | Completo local |
+| 15 | Mostrar estado Davis separado de Modbus/ESP8266 | `WebBridge.getDavisStatus()`, `davisStatusUpdated` y diagnostico Davis USB en `Mockup` | `node --check`, `git diff --check` y prueba funcional pendiente en UI real | Implementado; validar visualmente en laboratorio |
+| 16 | Graficar variables Davis con rango y zoom | Pestaña `Graficas` con rangos 1 h, 6 h, 24 h, 7 dias, 30 dias, Todo y escala +/- | `node --check`; usa historico SQLite cuando existe | Implementado; validar con datos acumulados |
 
 ## Brechas antes de QA
 
@@ -57,5 +60,5 @@ pendientes de validacion en laboratorio antes de pasar a QA funcional.
   corresponde a 0.01 in o 0.2 mm por click.
 - Hacer una prueba funcional con serial VCP y otra con transporte IP si el SENA
   usara ese modo.
-- Revisar si la lectura Davis debe persistirse en SQLite junto a irradiancia o
-  en una tabla meteorologica nueva; el SPEC local no define esquema historico.
+- Probar visualmente el diagnostico Davis USB y las graficas con el equipo
+  conectado durante varias horas para confirmar rangos, zoom y persistencia.

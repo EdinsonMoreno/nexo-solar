@@ -20,6 +20,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from ..config.config_defaults import DEFAULT_CONFIG
 from ..data_access.logging_service import LoggingService
+from ..data_access.repositories.davis_weather_repository import DavisWeatherRepository
 from ..data_access.repositories.irradiance_repository import IrradianceRepository
 
 
@@ -39,6 +40,7 @@ class WebBridge(QObject):
     safeStateChanged = pyqtSignal(bool)
     davisWeatherUpdated = pyqtSignal("QVariantMap")
     davisConnectionChanged = pyqtSignal(bool, str)
+    davisStatusUpdated = pyqtSignal("QVariantMap")
     davisRetryExhausted = pyqtSignal(str, str)
 
     def __init__(self, modbus_manager: Any, davis_reader: Optional[Any] = None, parent: Optional[QObject] = None) -> None:
@@ -52,6 +54,7 @@ class WebBridge(QObject):
         _db = DEFAULT_CONFIG["database"]
         # Fuente de la pestaña Análisis: por defecto el histórico medido en
         # campo, que vive en su propio archivo y no en la base de escritura.
+        self._write_db_path = _db["path"]
         self._db_path = _db.get("analysis_path", _db["path"])
         self._db_table = _db.get("analysis_table", _db.get("table_name", "mediciones"))
 
@@ -67,6 +70,7 @@ class WebBridge(QObject):
         if self.davis is not None:
             self.davis.weather_data_updated.connect(self._on_davis_weather)
             self.davis.connection_changed.connect(self._on_davis_connection)
+            self.davis.connection_lost.connect(self._on_davis_connection_lost)
             self.davis.log.connect(self._on_davis_log)
             self.davis.retry_exhausted.connect(self._on_davis_retry_exhausted)
 
@@ -86,6 +90,7 @@ class WebBridge(QObject):
             for signal, slot in (
                 (self.davis.weather_data_updated, self._on_davis_weather),
                 (self.davis.connection_changed, self._on_davis_connection),
+                (self.davis.connection_lost, self._on_davis_connection_lost),
                 (self.davis.log, self._on_davis_log),
                 (self.davis.retry_exhausted, self._on_davis_retry_exhausted),
             ):
@@ -111,17 +116,25 @@ class WebBridge(QObject):
 
     def _on_davis_weather(self, data: Any) -> None:
         payload = data.as_dict() if hasattr(data, "as_dict") else dict(data)
+        self.davisConnectionChanged.emit(True, self._davis_connection_label(True))
         self.davisWeatherUpdated.emit(payload)
+        self.davisStatusUpdated.emit(self._davis_status_payload())
 
     def _on_davis_connection(self, connected: bool) -> None:
-        text = "Conectado" if connected else "Desconectado"
+        text = self._davis_connection_label(connected)
         self.davisConnectionChanged.emit(bool(connected), text)
+        self.davisStatusUpdated.emit(self._davis_status_payload())
+
+    def _on_davis_connection_lost(self, message: str) -> None:
+        self.davisConnectionChanged.emit(False, message)
+        self.davisStatusUpdated.emit(self._davis_status_payload())
 
     def _on_davis_log(self, message: str) -> None:
         self.logMessage.emit("DAVIS", self._classify_level(message), str(message))
 
     def _on_davis_retry_exhausted(self, operation: str, error: str) -> None:
         self.davisRetryExhausted.emit(operation, error)
+        self.davisStatusUpdated.emit(self._davis_status_payload())
         self.logMessage.emit("DAVIS", "error", f"Reintentos agotados en {operation}: {error}")
 
     @staticmethod
@@ -213,6 +226,22 @@ class WebBridge(QObject):
         if self.davis is not None:
             self.davis.read_once()
 
+    @pyqtSlot(result="QVariantMap")
+    def getDavisStatus(self) -> dict:
+        """Return the current Davis USB/IP reader status for the web UI."""
+        return self._davis_status_payload()
+
+    @pyqtSlot(int, result="QVariantList")
+    def loadDavisHistory(self, range_hours: int = 0) -> list:
+        """Return recent persisted Davis readings for charts."""
+        try:
+            repo = DavisWeatherRepository(self._write_db_path, use_pool=False)
+            repo.create_table()
+            return repo.get_for_hours(int(range_hours), max_rows=2000)
+        except Exception as e:  # pragma: no cover - defensive
+            self.logMessage.emit("SQLITE", "error", f"Error leyendo histórico Davis: {e}")
+            return []
+
     @pyqtSlot(str, str, result=bool)
     def configureSqlite(self, db_path: str, table: str) -> bool:
         """Configure SQLite persistence on the Modbus client."""
@@ -280,6 +309,44 @@ class WebBridge(QObject):
             msg = str(e)
             self.logMessage.emit("SQLITE", "error", f"Error leyendo análisis: {msg}")
             return {"ok": False, "error": msg, "table": self._db_table, "rows": []}
+
+    def _davis_status_payload(self) -> dict:
+        if self.davis is None:
+            return {
+                "available": False,
+                "connected": False,
+                "transport": "",
+                "serial_port": "",
+                "ip_host": "",
+                "ip_port": 0,
+                "last_error": "Lector Davis no disponible",
+                "read_count": 0,
+                "last_reading": {},
+            }
+        transport = str(self.davis._get_config("transport", "serial"))
+        return {
+            "available": True,
+            "connected": bool(getattr(self.davis, "is_connected", False)),
+            "transport": transport,
+            "serial_port": str(self.davis._get_config("serial_port", "")),
+            "ip_host": str(self.davis._get_config("ip_host", "")),
+            "ip_port": int(self.davis._get_config("ip_port", 0)),
+            "last_error": str(getattr(self.davis, "last_error", "") or ""),
+            "read_count": int(getattr(self.davis, "read_count", 0) or 0),
+            "last_reading": (
+                self.davis.last_reading.as_dict()
+                if getattr(self.davis, "last_reading", None) is not None
+                else {}
+            ),
+        }
+
+    def _davis_connection_label(self, connected: bool) -> str:
+        if not connected:
+            return "Desconectada"
+        if self.davis is None:
+            return "Lector Davis no disponible"
+        transport = str(self.davis._get_config("transport", "serial")).lower()
+        return "Conectada por Davis USB" if transport == "serial" else "Conectada por Davis IP"
 
     @pyqtSlot(result=str)
     def browseDbFile(self) -> str:
