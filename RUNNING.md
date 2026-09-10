@@ -1,57 +1,39 @@
-# Cómo Ejecutar Nexo Solar
+# Ejecutar la aplicación
 
-## Método Recomendado (desde la raíz del proyecto)
+## Método recomendado
+
+Ejecute desde la raíz del repositorio:
 
 ```bash
 python run.py
 ```
 
-Este es el método recomendado porque:
-- Configura correctamente el Python path
-- Maneja los imports del paquete apropiadamente
-- Funciona consistentemente en todos los entornos
+El script raíz configura la ruta de importación y llama a `modbuspython.main_app.main`. Es la forma soportada para evitar errores de importación.
 
-## Método Alternativo (como módulo)
-
-Desde la raíz del proyecto:
+## Preparación
 
 ```bash
-python -m modbuspython.main_app
+python -m venv .venv
+source .venv/bin/activate          # Linux/macOS
+# Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp modbuspython/config.example.yaml config.yaml
 ```
 
-## ⚠️ NO Ejecutar Directamente
+Edite `config.yaml` con la dirección y registros de su dispositivo Modbus. Cree `.env` solo si necesita variables locales. Consulte `docs/CONFIGURATION_GUIDE.md`.
 
-**NO ejecutes:**
-```bash
-python modbuspython/main_app.py  # ❌ Esto causará errores de import
-```
-
-Ejecutar el archivo directamente causa `ModuleNotFoundError` porque Python no reconoce `modbuspython` como un paquete cuando se ejecuta de esta manera.
-
-## Requisitos
-
-Asegúrate de tener el entorno virtual activado:
+## No ejecutar así
 
 ```bash
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
+python modbuspython/main_app.py
 ```
 
-## Estructura de Imports
+Ese archivo usa imports de paquete y no está diseñado para ejecutarse directamente. También existe `python -m modbuspython.main_app`, pero `python run.py` es el método recomendado.
 
-El proyecto usa imports relativos dentro del paquete `modbuspython`:
-- `from .ui.monitor_tab import MonitorTab`
-- `from .data_access.modbus_client import ModbusClient`
-- `from .config.config_manager import ConfigurationManager`
+## Problemas de arranque
 
-Esto requiere que el proyecto se ejecute como un paquete, no como un script independiente.
-
-## Troubleshooting
-
-Si encuentras errores de import:
-1. Verifica que estás en la raíz del proyecto (donde está `run.py`)
-2. Verifica que el entorno virtual está activado
-3. Usa `python run.py` en lugar de ejecutar `main_app.py` directamente
+1. Confirme que está en la carpeta donde existe `run.py`.
+2. Active el entorno virtual correcto.
+3. Compruebe `pip install -r requirements.txt`.
+4. Si usa Linux, instale las bibliotecas Qt requeridas por su distribución.
+5. Revise `logs/solarsense.log` y [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
