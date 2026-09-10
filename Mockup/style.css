@@ -426,8 +426,7 @@ html, body {
 .weather-label {
   color: var(--text2);
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0;
 }
 
 .weather-value {
@@ -435,6 +434,19 @@ html, body {
   font-size: 18px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.muted-line {
+  color: var(--text2);
+  font-size: 12px;
+  margin-top: 10px;
 }
 
 @media (max-width: 800px) {

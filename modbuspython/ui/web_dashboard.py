@@ -55,7 +55,7 @@ class LoggingWebPage(QWebEnginePage):
 class WebDashboard(QWidget):
     """Container widget that renders the web dashboard and owns the bridge."""
 
-    def __init__(self, modbus_manager: Any, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, modbus_manager: Any, davis_reader: Optional[Any] = None, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.logger = LoggingService()
 
@@ -89,7 +89,7 @@ class WebDashboard(QWidget):
 
         # QWebChannel + bridge
         self.channel = QWebChannel(self.view.page())
-        self.bridge = WebBridge(modbus_manager)
+        self.bridge = WebBridge(modbus_manager, davis_reader=davis_reader)
         self.channel.registerObject("bridge", self.bridge)
         self.view.page().setWebChannel(self.channel)
         self.bridge.connect_backend()

@@ -199,6 +199,12 @@
             <div class="led yellow" id="davisLed"></div>
             <span class="state-text" id="davisState">Pendiente de conexión</span>
           </div>
+          <div class="button-row">
+            <button class="btn btn-primary" id="davisConnectBtn" onclick="connectDavis()">Conectar</button>
+            <button class="btn btn-secondary" onclick="readDavisOnce()">Leer ahora</button>
+            <button class="btn btn-danger" onclick="disconnectDavis()">Desconectar</button>
+          </div>
+          <div class="muted-line" id="davisLastRead">Última lectura: --</div>
         </div>
 
         <div class="card weather-card">
@@ -206,11 +212,18 @@
           <div class="weather-data-grid">
             <div class="weather-item highlight"><span class="weather-label">Radiación solar</span><span class="weather-value" id="weatherSolar">-- W/m²</span></div>
             <div class="weather-item"><span class="weather-label">Temperatura exterior</span><span class="weather-value" id="weatherTempOut">-- °C</span></div>
+            <div class="weather-item"><span class="weather-label">Temperatura interior</span><span class="weather-value" id="weatherTempIn">-- °C</span></div>
             <div class="weather-item"><span class="weather-label">Humedad exterior</span><span class="weather-value" id="weatherHumidityOut">-- %</span></div>
+            <div class="weather-item"><span class="weather-label">Humedad interior</span><span class="weather-value" id="weatherHumidityIn">-- %</span></div>
             <div class="weather-item"><span class="weather-label">Presión</span><span class="weather-value" id="weatherPressure">-- hPa</span></div>
             <div class="weather-item"><span class="weather-label">Viento</span><span class="weather-value" id="weatherWind">-- m/s</span></div>
+            <div class="weather-item"><span class="weather-label">Viento promedio 10 min</span><span class="weather-value" id="weatherWindAvg">-- m/s</span></div>
             <div class="weather-item"><span class="weather-label">Dirección viento</span><span class="weather-value" id="weatherWindDir">-- °</span></div>
+            <div class="weather-item"><span class="weather-label">Tasa de lluvia</span><span class="weather-value" id="weatherRainRate">-- mm</span></div>
+            <div class="weather-item"><span class="weather-label">Lluvia de tormenta</span><span class="weather-value" id="weatherRainStorm">-- mm</span></div>
             <div class="weather-item"><span class="weather-label">Lluvia día</span><span class="weather-value" id="weatherRainDay">-- mm</span></div>
+            <div class="weather-item"><span class="weather-label">Lluvia mes</span><span class="weather-value" id="weatherRainMonth">-- mm</span></div>
+            <div class="weather-item"><span class="weather-label">Lluvia año</span><span class="weather-value" id="weatherRainYear">-- mm</span></div>
             <div class="weather-item"><span class="weather-label">Índice UV</span><span class="weather-value" id="weatherUv">--</span></div>
           </div>
         </div>

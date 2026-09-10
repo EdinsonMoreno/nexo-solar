@@ -17,6 +17,18 @@ modbus:
     elevation_actual: 3    # Register for actual elevation angle
     irradiance: 4          # Register for irradiance reading
 
+# Davis WeatherLink Communication Settings
+davis_weatherlink:
+  transport: "serial"      # serial or ip
+  serial_port: "/dev/ttyUSB0"
+  baud_rate: 19200         # Davis WeatherLink VCP uses 19200/8N1
+  ip_host: "192.168.1.50"
+  ip_port: 22222
+  poll_interval_ms: 5000
+  timeout: 5.0
+  retry_attempts: 3
+  retry_backoff: 1.0
+
 # Database Configuration
 database:
   path: "data/solarsense.db"  # Path to SQLite database file

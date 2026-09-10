@@ -19,6 +19,7 @@ setup(
         "pymodbus>=3.9.2",
         "pyyaml>=6.0",
         "jsonschema>=4.0",
+        "pyserial>=3.5",
     ],
     extras_require={
         "dev": [

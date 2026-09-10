@@ -15,6 +15,7 @@ from PyQt6.QtCore import Qt
 from typing import Optional
 from .ui.web_dashboard import WebDashboard
 from .data_access.modbus_client import ModbusClient as ModbusManager
+from .data_access.davis_weatherlink import DavisWeatherLinkReader
 from .ui.splash_screen import SolarSenseSplashScreen
 from .data_access.logging_service import LoggingService
 from .config.config_manager import ConfigurationManager
@@ -48,6 +49,7 @@ class MainWindow(QMainWindow):
         self.config: Optional[ConfigurationManager] = config
         self.logger: LoggingService = LoggingService()
         self.modbus_manager: ModbusManager
+        self.davis_reader: DavisWeatherLinkReader
 
         self.logger.info("Starting MainWindow initialization")
         super().__init__()
@@ -56,12 +58,13 @@ class MainWindow(QMainWindow):
         self.setStyleSheet("QMainWindow { background: #0d1117; }")
 
         self._setup_modbus()
+        self._setup_davis_reader()
         self._setup_dashboard()
         self.logger.info("MainWindow initialization completed successfully")
 
     def _setup_dashboard(self) -> None:
         """Set the embedded web dashboard (Mockup SPA) as the main UI."""
-        self.dashboard = WebDashboard(modbus_manager=self.modbus_manager)
+        self.dashboard = WebDashboard(modbus_manager=self.modbus_manager, davis_reader=self.davis_reader)
         self.setCentralWidget(self.dashboard)
 
     def _setup_modbus(self) -> None:
@@ -80,6 +83,13 @@ class MainWindow(QMainWindow):
         self.modbus_manager.retry_exhausted.connect(self._on_retry_exhausted)
         self.modbus_manager.start()
         self.logger.debug("ModbusClient thread started")
+
+    def _setup_davis_reader(self) -> None:
+        """Initialize the Davis WeatherLink reader thread."""
+        self.davis_reader = DavisWeatherLinkReader(config_manager=self.config)
+        self.davis_reader.retry_exhausted.connect(self._on_davis_retry_exhausted)
+        self.davis_reader.start()
+        self.logger.debug("DavisWeatherLinkReader thread started")
 
     def _on_retry_exhausted(self, operation: str, error_message: str) -> None:
         """Handle retry exhaustion signal from ModbusClient.
@@ -114,6 +124,10 @@ class MainWindow(QMainWindow):
 
         self.logger.info(f"User notified about retry exhaustion for operation: {operation}")
 
+    def _on_davis_retry_exhausted(self, operation: str, error_message: str) -> None:
+        """Log Davis retry exhaustion without interrupting application startup."""
+        self.logger.error(f"Davis retry exhausted for operation '{operation}': {error_message}")
+
     def closeEvent(self, event) -> None:
         """Handle application close event with proper resource cleanup.
 
@@ -128,6 +142,7 @@ class MainWindow(QMainWindow):
         self.logger.info("Application closing, cleaning up resources")
 
         self._cleanup_dashboard()
+        self._stop_davis_reader()
         self._stop_modbus_client()
         self._clear_web_engine_cache()
         self._close_log_handlers()
@@ -151,6 +166,15 @@ class MainWindow(QMainWindow):
                 self.logger.debug("ModbusClient thread stopped")
             except Exception as e:
                 self.logger.error(f"Error stopping ModbusClient: {e}")
+
+    def _stop_davis_reader(self) -> None:
+        """Stop the Davis reader thread gracefully."""
+        if hasattr(self, "davis_reader"):
+            try:
+                self.davis_reader.stop()
+                self.logger.debug("DavisWeatherLinkReader thread stopped")
+            except Exception as e:
+                self.logger.error(f"Error stopping DavisWeatherLinkReader: {e}")
 
     def _clear_web_engine_cache(self) -> None:
         """Clean up QWebEngine cache and temporary files."""

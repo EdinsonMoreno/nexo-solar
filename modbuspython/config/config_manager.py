@@ -465,3 +465,9 @@ class ConfigurationManager:
         """Get logging-specific configuration."""
         result = self._config.get("logging", {})
         return result if isinstance(result, dict) else {}
+
+    @property
+    def davis_weatherlink_config(self) -> Dict[str, Any]:
+        """Get Davis WeatherLink-specific configuration."""
+        result = self._config.get("davis_weatherlink", {})
+        return result if isinstance(result, dict) else {}

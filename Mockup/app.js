@@ -11,6 +11,8 @@ const state = {
   countVal: 0,
   diagConnected: false,
   diagAutoRead: true,
+  davisConnected: false,
+  davisLastRead: null,
   diagUpdateCount: 0,
   docMode: 'html',
 };
@@ -223,6 +225,13 @@ function initBridge() {
       });
       bridge.connectionChanged.connect(setConnectionUI);
       bridge.safeStateChanged.connect(setSafeStateUI);
+      if (bridge.davisWeatherUpdated) bridge.davisWeatherUpdated.connect(updateDavisWeather);
+      if (bridge.davisConnectionChanged) bridge.davisConnectionChanged.connect(setDavisConnectionUI);
+      if (bridge.davisRetryExhausted) {
+        bridge.davisRetryExhausted.connect(function (operation, error) {
+          setDavisConnectionUI(false, `${operation}: ${error}`);
+        });
+      }
       addLog('[SISTEMA] Conectado al backend (bridge activo)', 'info');
     });
     return true;
@@ -269,6 +278,76 @@ function setSafeStateUI(inSafe) {
     if (txt) txt.textContent = 'Estado: Normal';
     if (recBtn) recBtn.classList.add('hidden');
   }
+}
+
+function setDavisConnectionUI(connected, message) {
+  state.davisConnected = !!connected;
+  const led = document.getElementById('davisLed');
+  const text = document.getElementById('davisState');
+  const btn = document.getElementById('davisConnectBtn');
+  if (led) led.className = 'led ' + (connected ? 'green' : 'red');
+  if (text) text.textContent = message || (connected ? 'Conectado' : 'Desconectado');
+  if (btn) btn.disabled = !!connected;
+}
+
+function updateDavisWeather(data) {
+  state.davisLastRead = new Date();
+  setDavisValue('weatherSolar', data.solar_radiation_wm2, ' W/m²', 0);
+  setDavisValue('weatherTempOut', data.temp_out_c, ' °C', 1);
+  setDavisValue('weatherTempIn', data.temp_in_c, ' °C', 1);
+  setDavisValue('weatherHumidityOut', data.humidity_out, ' %', 0);
+  setDavisValue('weatherHumidityIn', data.humidity_in, ' %', 0);
+  setDavisValue('weatherPressure', data.pressure_hpa, ' hPa', 1);
+  setDavisValue('weatherWind', data.wind_speed_ms, ' m/s', 2);
+  setDavisValue('weatherWindAvg', data.wind_speed_avg_ms, ' m/s', 2);
+  setDavisValue('weatherWindDir', data.wind_dir_deg, ' °', 0);
+  setDavisValue('weatherRainRate', data.rain_rate_mm, ' mm', 2);
+  setDavisValue('weatherRainStorm', data.rain_storm_mm, ' mm', 2);
+  setDavisValue('weatherRainDay', data.rain_day_mm, ' mm', 2);
+  setDavisValue('weatherRainMonth', data.rain_month_mm, ' mm', 2);
+  setDavisValue('weatherRainYear', data.rain_year_mm, ' mm', 2);
+  setDavisValue('weatherUv', data.uv_index, '', 1);
+  const last = document.getElementById('davisLastRead');
+  if (last) last.textContent = 'Última lectura: ' + state.davisLastRead.toLocaleTimeString('es-CO', { hour12: false });
+  if (typeof data.solar_radiation_wm2 === 'number') applyIrradiance(data.solar_radiation_wm2);
+}
+
+function setDavisValue(id, value, unit, digits) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    el.textContent = '--' + unit;
+    return;
+  }
+  el.textContent = value.toFixed(digits) + unit;
+}
+
+function connectDavis() {
+  if (!bridge || !bridge.connectDavis) {
+    setDavisConnectionUI(false, 'Backend Davis no disponible');
+    return;
+  }
+  const transport = document.getElementById('davisTransport').value;
+  const serialPort = document.getElementById('davisSerialPort').value;
+  const ipHost = document.getElementById('davisIpHost').value;
+  const ipPort = parseInt(document.getElementById('davisIpPort').value, 10) || 22222;
+  setDavisConnectionUI(false, 'Conectando...');
+  bridge.connectDavis(transport, serialPort, ipHost, ipPort, function (ok) {
+    if (!ok) setDavisConnectionUI(false, 'No se pudo conectar');
+  });
+}
+
+function disconnectDavis() {
+  if (bridge && bridge.disconnectDavis) bridge.disconnectDavis();
+  setDavisConnectionUI(false, 'Desconectado');
+}
+
+function readDavisOnce() {
+  if (!state.davisConnected) {
+    showToast('Davis no conectado', 'error');
+    return;
+  }
+  if (bridge && bridge.readDavisOnce) bridge.readDavisOnce();
 }
 
 function updateMonitorUI() {

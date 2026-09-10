@@ -37,11 +37,15 @@ class WebBridge(QObject):
     logMessage = pyqtSignal(str, str, str)  # source, level, text
     connectionChanged = pyqtSignal(bool)
     safeStateChanged = pyqtSignal(bool)
+    davisWeatherUpdated = pyqtSignal("QVariantMap")
+    davisConnectionChanged = pyqtSignal(bool, str)
+    davisRetryExhausted = pyqtSignal(str, str)
 
-    def __init__(self, modbus_manager: Any, parent: Optional[QObject] = None) -> None:
+    def __init__(self, modbus_manager: Any, davis_reader: Optional[Any] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.logger = LoggingService()
         self.modbus = modbus_manager
+        self.davis = davis_reader
         self._connected = False
         self._auto_read = True
         self._read_interval_ms = 2000
@@ -60,6 +64,11 @@ class WebBridge(QObject):
         self.modbus.log.connect(self._on_log)
         self.modbus.conexion_cambiada.connect(self._on_connection)
         self.modbus.retry_exhausted.connect(self._on_retry_exhausted)
+        if self.davis is not None:
+            self.davis.weather_data_updated.connect(self._on_davis_weather)
+            self.davis.connection_changed.connect(self._on_davis_connection)
+            self.davis.log.connect(self._on_davis_log)
+            self.davis.retry_exhausted.connect(self._on_davis_retry_exhausted)
 
     def disconnect_backend(self) -> None:
         """Best-effort disconnect of backend signals (used on cleanup)."""
@@ -73,6 +82,17 @@ class WebBridge(QObject):
                 signal.disconnect(slot)
             except (TypeError, RuntimeError):
                 pass
+        if self.davis is not None:
+            for signal, slot in (
+                (self.davis.weather_data_updated, self._on_davis_weather),
+                (self.davis.connection_changed, self._on_davis_connection),
+                (self.davis.log, self._on_davis_log),
+                (self.davis.retry_exhausted, self._on_davis_retry_exhausted),
+            ):
+                try:
+                    signal.disconnect(slot)
+                except (TypeError, RuntimeError):
+                    pass
 
     def _on_irradiance(self, value: float) -> None:
         self.irradianceUpdated.emit(float(value))
@@ -88,6 +108,21 @@ class WebBridge(QObject):
         in_safe = bool(getattr(self.modbus, "is_in_safe_state", lambda: True)())
         self.safeStateChanged.emit(in_safe)
         self.logMessage.emit("SISTEMA", "error", f"Reintentos agotados en {operation}: {error}")
+
+    def _on_davis_weather(self, data: Any) -> None:
+        payload = data.as_dict() if hasattr(data, "as_dict") else dict(data)
+        self.davisWeatherUpdated.emit(payload)
+
+    def _on_davis_connection(self, connected: bool) -> None:
+        text = "Conectado" if connected else "Desconectado"
+        self.davisConnectionChanged.emit(bool(connected), text)
+
+    def _on_davis_log(self, message: str) -> None:
+        self.logMessage.emit("DAVIS", self._classify_level(message), str(message))
+
+    def _on_davis_retry_exhausted(self, operation: str, error: str) -> None:
+        self.davisRetryExhausted.emit(operation, error)
+        self.logMessage.emit("DAVIS", "error", f"Reintentos agotados en {operation}: {error}")
 
     @staticmethod
     def _classify_level(message: str) -> str:
@@ -146,6 +181,37 @@ class WebBridge(QObject):
     def recoverSafeState(self) -> None:
         self.modbus.exit_safe_state()
         self.safeStateChanged.emit(False)
+
+    @pyqtSlot(str, str, str, int, result=bool)
+    def connectDavis(self, transport: str, serial_port: str, ip_host: str, ip_port: int) -> bool:
+        """Configure and connect the Davis reader."""
+        if self.davis is None:
+            self.davisConnectionChanged.emit(False, "Lector Davis no disponible")
+            return False
+        try:
+            self.davis.configure_runtime(transport, serial_port, ip_host, ip_port)
+            if not self.davis.isRunning():
+                self.davis.start()
+            ok = bool(self.davis.connect_station())
+            if ok:
+                self.davis.iniciar()
+            return ok
+        except Exception as e:  # pragma: no cover - defensive
+            self.davisConnectionChanged.emit(False, str(e))
+            self.logMessage.emit("DAVIS", "error", f"Error conectando Davis: {e}")
+            return False
+
+    @pyqtSlot()
+    def disconnectDavis(self) -> None:
+        """Disconnect the Davis reader."""
+        if self.davis is not None:
+            self.davis.disconnect_station()
+
+    @pyqtSlot()
+    def readDavisOnce(self) -> None:
+        """Request one Davis LOOP reading."""
+        if self.davis is not None:
+            self.davis.read_once()
 
     @pyqtSlot(str, str, result=bool)
     def configureSqlite(self, db_path: str, table: str) -> bool:
