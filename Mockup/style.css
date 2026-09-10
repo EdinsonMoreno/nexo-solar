@@ -519,6 +519,23 @@ button { color: inherit; }
 .field-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; min-width: 0; }
 .field-label { display: inline-flex; align-items: center; margin: 0; }
 
+.serial-detector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.port-status {
+  min-height: 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.port-status.info { color: var(--sena-dark); }
+.port-status.warn { color: var(--warn); }
+.port-status.error { color: var(--danger); }
+
 .input-field {
   min-height: 38px;
   width: 100%;

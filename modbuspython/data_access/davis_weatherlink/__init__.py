@@ -6,6 +6,7 @@ reader is loaded lazily so non-UI tests can run in minimal environments.
 
 from .crc_validator import CRCValidator
 from .packet_parser import PacketParser
+from .serial_ports import is_likely_davis_port, list_serial_ports
 from .transport import BaseTransport, IPTransport, SerialTransport
 from .unit_conversion import fahrenheit_to_celsius, inches_to_mm, inhg_to_hpa, mph_to_ms
 from .weather_data import WeatherData
@@ -21,6 +22,8 @@ __all__ = [
     "fahrenheit_to_celsius",
     "inches_to_mm",
     "inhg_to_hpa",
+    "is_likely_davis_port",
+    "list_serial_ports",
     "mph_to_ms",
 ]
 

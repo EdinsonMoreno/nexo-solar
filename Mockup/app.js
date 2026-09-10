@@ -15,6 +15,7 @@ const state = {
   davisLastRead: null,
   davisWeather: null,
   davisStatus: null,
+  davisPorts: [],
   lastEnergyAt: null,
   siteEnergyKwhM2: 0,
   panelAreaM2: 1,
@@ -375,6 +376,7 @@ function initBridge() {
       }
       addLog('[SISTEMA] Conectado al backend (bridge activo)', 'info');
       refreshDavisStatus();
+      detectDavisPorts(false);
       loadDavisHistory();
     });
     return true;
@@ -486,6 +488,7 @@ function updateDavisStatus(status) {
   if (typeof state.davisStatus.connected === 'boolean') {
     state.davisConnected = state.davisStatus.connected;
   }
+  syncDavisConfigFields(state.davisStatus);
   const led = document.getElementById('davisLed');
   const text = document.getElementById('davisState');
   const isSerial = (state.davisStatus?.transport || 'serial') === 'serial';
@@ -493,6 +496,19 @@ function updateDavisStatus(status) {
   if (text) text.textContent = state.davisConnected ? (isSerial ? 'Conectada por USB' : 'Conectada por IP') : 'Desconectada';
   updateDavisDiagnostic();
   updateHomeSummary();
+}
+
+function syncDavisConfigFields(status) {
+  if (!status) return;
+  const transport = document.getElementById('davisTransport');
+  const serial = document.getElementById('davisSerialPort');
+  const host = document.getElementById('davisIpHost');
+  const port = document.getElementById('davisIpPort');
+  if (transport && status.transport) transport.value = status.transport;
+  if (serial && status.serial_port) serial.value = status.serial_port;
+  if (host && status.ip_host) host.value = status.ip_host;
+  if (port && status.ip_port) port.value = status.ip_port;
+  updateSelectedPort(status.serial_port || '');
 }
 
 function setDavisValue(id, value, unit, digits) {
@@ -563,6 +579,108 @@ function connectDavis() {
   bridge.connectDavis(transport, serialPort, ipHost, ipPort, function (ok) {
     if (!ok) setDavisConnectionUI(false, 'No se pudo conectar');
   });
+}
+
+function detectDavisPorts(showFeedback = true) {
+  const btn = document.getElementById('detectPortsBtn');
+  if (!bridge || !bridge.listDavisSerialPorts) {
+    setPortStatus('La detección está disponible solo dentro de la app de escritorio.', 'warn');
+    return;
+  }
+  if (btn) btn.disabled = true;
+  setPortStatus('Detectando puertos seriales...', 'info');
+  bridge.listDavisSerialPorts(function (ports) {
+    state.davisPorts = Array.isArray(ports) ? ports : [];
+    renderDavisPorts();
+    if (!state.davisPorts.length) {
+      setPortStatus('Sin puertos. Conectá el USB; en Fedora revisá permisos dialout/uucp.', 'warn');
+    } else if (showFeedback) {
+      const likely = state.davisPorts.find(port => port.is_likely_davis);
+      setPortStatus(likely ? `Candidato Davis detectado: ${likely.device}` : 'Puertos detectados. Elegí el asignado a la consola Davis.', 'info');
+    } else {
+      setPortStatus('Puertos seriales listos para seleccionar.', 'info');
+    }
+    if (btn) btn.disabled = false;
+  });
+}
+
+function renderDavisPorts() {
+  const select = document.getElementById('davisSerialPortSelect');
+  if (!select) return;
+  const current = document.getElementById('davisSerialPort')?.value || state.davisStatus?.serial_port || '';
+  select.innerHTML = '';
+  if (!state.davisPorts.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'Sin puertos detectados';
+    select.appendChild(option);
+    return;
+  }
+  state.davisPorts.forEach((port) => {
+    const option = document.createElement('option');
+    option.value = port.device;
+    option.textContent = formatPortOption(port);
+    select.appendChild(option);
+  });
+  const preferred = state.davisPorts.find(port => port.device === current)
+    || state.davisPorts.find(port => port.is_likely_davis)
+    || state.davisPorts[0];
+  select.value = preferred?.device || '';
+  updateSelectedPort(select.value);
+}
+
+function formatPortOption(port) {
+  const parts = [port.device];
+  if (port.description) parts.push(port.description);
+  if (port.manufacturer) parts.push(port.manufacturer);
+  if (port.is_likely_davis) parts.push('probable Davis');
+  return parts.join(' - ');
+}
+
+function updateSelectedPort(device) {
+  const select = document.getElementById('davisSerialPortSelect');
+  if (select && device && Array.from(select.options).some(option => option.value === device)) {
+    select.value = device;
+  }
+}
+
+function selectDavisPortCandidate() {
+  const select = document.getElementById('davisSerialPortSelect');
+  const input = document.getElementById('davisSerialPort');
+  if (select?.value && input) input.value = select.value;
+}
+
+function useSelectedDavisPort() {
+  const select = document.getElementById('davisSerialPortSelect');
+  const port = select?.value || document.getElementById('davisSerialPort')?.value || '';
+  if (!port) {
+    setPortStatus('Seleccioná un puerto serial.', 'warn');
+    return;
+  }
+  const input = document.getElementById('davisSerialPort');
+  if (input) input.value = port;
+  const transport = document.getElementById('davisTransport');
+  if (transport) transport.value = 'serial';
+  if (!bridge || !bridge.applyDavisSerialPort) {
+    setPortStatus(`Puerto seleccionado: ${port}`, 'info');
+    return;
+  }
+  bridge.applyDavisSerialPort(port, function (result) {
+    const ok = !!result?.ok;
+    setPortStatus(result?.message || (ok ? `Puerto configurado: ${port}` : 'No se pudo configurar el puerto'), ok ? 'info' : 'error');
+    if (ok && bridge.testDavisSerialPort) {
+      bridge.testDavisSerialPort(port, function (test) {
+        setPortStatus(test?.message || `Puerto configurado: ${port}`, test?.ok ? 'info' : 'warn');
+      });
+    }
+  });
+}
+
+function setPortStatus(message, level = 'info') {
+  const el = document.getElementById('davisPortStatus');
+  if (!el) return;
+  el.textContent = message;
+  el.className = 'port-status ' + level;
 }
 
 function disconnectDavis() {

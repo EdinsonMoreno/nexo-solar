@@ -21,6 +21,8 @@ from typing import Any, Optional
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from ..config.config_defaults import DEFAULT_CONFIG
+from ..data_access.davis_weatherlink.serial_ports import list_serial_ports
+from ..data_access.davis_weatherlink.transport import SerialTransport
 from ..data_access.logging_service import LoggingService
 from ..data_access.repositories.davis_weather_repository import DavisWeatherRepository
 from ..data_access.repositories.irradiance_repository import IrradianceRepository
@@ -231,6 +233,61 @@ class WebBridge(QObject):
         """Return the current Davis USB/IP reader status for the web UI."""
         return self._davis_status_payload()
 
+    @pyqtSlot(result="QVariantList")
+    def listDavisSerialPorts(self) -> list:
+        """Return USB/serial ports detected by pyserial on Linux or Windows."""
+        ports = list_serial_ports()
+        if not ports:
+            self.logMessage.emit(
+                "DAVIS",
+                "warn",
+                "No se detectaron puertos seriales. En Fedora revisá permisos de dialout/uucp o que el USB esté conectado.",
+            )
+        return ports
+
+    @pyqtSlot(str, result="QVariantMap")
+    def applyDavisSerialPort(self, serial_port: str) -> dict:
+        """Set the active Davis serial port and keep Davis ready for reconnect."""
+        if self.davis is None:
+            return {"ok": False, "message": "Lector Davis no disponible", "serial_port": ""}
+        port = serial_port.strip()
+        if not port:
+            return {"ok": False, "message": "Seleccioná un puerto serial", "serial_port": ""}
+        try:
+            status = self._davis_status_payload()
+            self.davis.configure_runtime(
+                "serial",
+                port,
+                str(status.get("ip_host") or "192.168.1.50"),
+                int(status.get("ip_port") or 22222),
+            )
+            message = f"Puerto Davis configurado: {port}"
+            self.logMessage.emit("DAVIS", "info", message)
+            self.davisStatusUpdated.emit(self._davis_status_payload())
+            return {"ok": True, "message": message, "serial_port": port}
+        except Exception as e:  # pragma: no cover - defensive
+            return {"ok": False, "message": f"No se pudo configurar el puerto: {e}", "serial_port": port}
+
+    @pyqtSlot(str, result="QVariantMap")
+    def testDavisSerialPort(self, serial_port: str) -> dict:
+        """Open and close a Davis serial port quickly to catch busy/permission errors."""
+        port = serial_port.strip()
+        if not port:
+            return {"ok": False, "message": "Seleccioná un puerto serial", "serial_port": ""}
+        transport = SerialTransport(port=port, baud_rate=19200, timeout=0.75)
+        try:
+            transport.connect()
+            return {"ok": True, "message": f"Puerto disponible: {port}", "serial_port": port}
+        except Exception as e:
+            message = self._serial_error_message(str(e), port)
+            self.logMessage.emit("DAVIS", "warn", message)
+            return {"ok": False, "message": message, "serial_port": port}
+        finally:
+            try:
+                transport.disconnect()
+            except Exception:
+                pass
+
     @pyqtSlot(int, result="QVariantList")
     def loadDavisHistory(self, range_hours: int = 0) -> list:
         """Return recent persisted Davis readings for charts."""
@@ -410,6 +467,17 @@ class WebBridge(QObject):
             return "Lector Davis no disponible"
         transport = str(self.davis._get_config("transport", "serial")).lower()
         return "Conectada por Davis USB" if transport == "serial" else "Conectada por Davis IP"
+
+    @staticmethod
+    def _serial_error_message(error: str, port: str) -> str:
+        low = error.lower()
+        if "permission" in low or "access is denied" in low or "permiso" in low:
+            return f"Sin permiso para abrir {port}. En Fedora agregá el usuario al grupo dialout/uucp y reconectá el USB."
+        if "busy" in low or "resource" in low or "denied" in low or "ocupado" in low:
+            return f"El puerto {port} está ocupado por otra aplicación."
+        if "no such file" in low or "cannot find" in low or "not found" in low:
+            return f"El puerto {port} no existe o fue desconectado."
+        return f"No se pudo abrir {port}: {error}"
 
     @pyqtSlot(result=str)
     def browseDbFile(self) -> str:

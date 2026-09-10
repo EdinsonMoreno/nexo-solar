@@ -15,8 +15,37 @@ Esta carpeta documenta la integracion Davis WeatherLink para Nexo Solar.
 - `WebBridge` traduce las senales Davis hacia la pestana "Estacion Davis" sin meter logica de protocolo en JavaScript.
 - La interfaz muestra Davis USB separado de Modbus/ESP8266 y usa el historico
   persistido para graficas cuando esta disponible.
+- La pestaña de configuracion puede detectar puertos USB/serial visibles para
+  pyserial, elegir el candidato Davis y actualizar `davis_weatherlink.serial_port`
+  en la configuracion activa.
 - La matriz de trazabilidad esta en `docs/DAVIS_SPEC_MATRIX.md`.
 - El plan de pruebas con equipo real esta en `docs/DAVIS_LAB_TEST_PLAN.md`.
+
+## Autoconfiguracion USB/Serial
+
+En **Configuracion > Conexion Davis**, el boton **Detectar puertos** lista los
+puertos visibles para pyserial sin ejecutar comandos del sistema.
+
+- En Windows se muestran los puertos `COMx` asignados por el Administrador de
+  dispositivos, por ejemplo `COM3` o `COM7`.
+- En Fedora/Linux se muestran dispositivos como `/dev/ttyUSB0` y `/dev/ttyACM0`.
+- La app marca como candidato Davis los puertos con metadatos tipicos de
+  WeatherLink, Silicon Labs/CP210x, FTDI o USB serial.
+- Al presionar **Usar este puerto**, la app cambia el transporte a `serial`,
+  actualiza `davis_weatherlink.serial_port` en la configuracion activa y deja el
+  lector Davis listo para conectar o reconectar con ese puerto.
+
+Si Fedora muestra el puerto pero la prueba corta devuelve permiso denegado,
+agrega el usuario al grupo serial correspondiente y volve a iniciar sesion:
+
+```bash
+sudo usermod -aG dialout,uucp $USER
+```
+
+Si el mensaje indica puerto ocupado, cerra cualquier monitor serial, IDE o
+instancia anterior de Nexo Solar que este usando el mismo puerto. En Windows,
+confirma el COM asignado desde el Administrador de dispositivos si hay mas de un
+adaptador conectado.
 
 ## Reglas de mantenimiento
 

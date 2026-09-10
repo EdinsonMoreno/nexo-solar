@@ -516,6 +516,16 @@
                 <label class="field-label">Puerto serial</label>
                 <input type="text" class="input-field" id="davisSerialPort" value="/dev/ttyUSB0" />
               </div>
+              <div class="serial-detector">
+                <div class="input-row">
+                  <select class="input-field" id="davisSerialPortSelect" aria-label="Puertos seriales detectados" onchange="selectDavisPortCandidate()">
+                    <option value="">Detectá puertos para elegir</option>
+                  </select>
+                  <button class="btn btn-outline" id="detectPortsBtn" onclick="detectDavisPorts()">Detectar puertos</button>
+                  <button class="btn btn-secondary" onclick="useSelectedDavisPort()">Usar este puerto</button>
+                </div>
+                <div class="port-status" id="davisPortStatus">Windows muestra el COM asignado; Fedora muestra /dev/ttyUSB* o /dev/ttyACM*.</div>
+              </div>
               <div class="field-row">
                 <div class="field-group">
                   <label class="field-label">Host IP</label>
