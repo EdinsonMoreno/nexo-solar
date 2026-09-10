@@ -14,6 +14,8 @@ QThread are delivered here through Qt's queued connections, so it is safe to
 forward them to JavaScript via this object's own signals.
 """
 
+from pathlib import Path
+import sqlite3
 from typing import Any, Optional
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -52,8 +54,6 @@ class WebBridge(QObject):
         self._auto_read = True
         self._read_interval_ms = 2000
         _db = DEFAULT_CONFIG["database"]
-        # Fuente de la pestaña Análisis: por defecto el histórico medido en
-        # campo, que vive en su propio archivo y no en la base de escritura.
         self._write_db_path = _db["path"]
         self._db_path = _db.get("analysis_path", _db["path"])
         self._db_table = _db.get("analysis_table", _db.get("table_name", "mediciones"))
@@ -236,7 +236,8 @@ class WebBridge(QObject):
         """Return recent persisted Davis readings for charts."""
         try:
             repo = DavisWeatherRepository(self._write_db_path, use_pool=False)
-            repo.create_table()
+            if not self._table_exists(self._write_db_path, DavisWeatherRepository.TABLE_NAME):
+                return []
             return repo.get_for_hours(int(range_hours), max_rows=50000)
         except Exception as e:  # pragma: no cover - defensive
             self.logMessage.emit("SQLITE", "error", f"Error leyendo histórico Davis: {e}")
@@ -253,42 +254,69 @@ class WebBridge(QObject):
         try:
             ok = bool(self.modbus.configurar_sqlite(db_path, table))
             if ok:
-                self._db_path = db_path
-                self._db_table = table
-                self._write_db_path = db_path
-                repo = DavisWeatherRepository(self._write_db_path, use_pool=False)
-                repo.create_table()
-                if self.davis is not None and hasattr(self.davis, "configure_database_path"):
-                    self.davis.configure_database_path(db_path)
+                self._activate_database(db_path, DavisWeatherRepository.TABLE_NAME)
                 self.logMessage.emit(
                     "SQLITE",
                     "info",
-                    f"Histórico Davis listo en {DavisWeatherRepository.TABLE_NAME} sin datos de prueba",
+                    f"Base activa configurada: {db_path}",
                 )
             return ok
         except Exception as e:  # pragma: no cover - defensive
             self.logMessage.emit("SQLITE", "error", f"Error configurando SQLite: {e}")
             return False
 
+    @pyqtSlot(str, result=bool)
+    def connectExistingSqlite(self, db_path: str) -> bool:
+        """Use an existing SQLite database without creating tables or rows."""
+        try:
+            if not db_path:
+                return False
+            path = Path(db_path).expanduser()
+            if not path.exists():
+                self.logMessage.emit("SQLITE", "error", f"La base no existe: {db_path}")
+                return False
+            with sqlite3.connect(str(path)) as conn:
+                conn.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1").fetchall()
+            self._activate_database(str(path), self._preferred_table(str(path)))
+            self.logMessage.emit("SQLITE", "info", f"Base existente conectada: {path}")
+            return True
+        except Exception as e:  # pragma: no cover - defensive
+            self.logMessage.emit("SQLITE", "error", f"Error abriendo SQLite existente: {e}")
+            return False
+
+    @pyqtSlot(result="QVariantMap")
+    def getActiveDatabase(self) -> dict:
+        """Return the SQLite file currently used by Davis and Datos."""
+        return {
+            "path": self._db_path,
+            "write_path": self._write_db_path,
+            "analysis_table": self._db_table,
+            "davis_table": DavisWeatherRepository.TABLE_NAME,
+        }
+
     @pyqtSlot(result="QVariantList")
     def listTables(self) -> list:
         """List the tables available in the analysis database, with row counts.
 
         Returns:
-            List of ``{name, count}`` dicts, ordered as stored (empty on error).
+            List of ``{name, count, kind}`` dicts, with Davis first.
         """
         try:
-            repo = IrradianceRepository(self._db_path, use_pool=False)
             out = []
-            for name in repo.get_tables():
+            for name in self._sqlite_table_names(self._db_path):
                 if name.startswith("sqlite_") or name in ("schema_version",):
                     continue
                 try:
-                    rows = repo.get_records(name, None, None, raise_on_error=True)
-                    out.append({"name": name, "count": len(rows)})
+                    out.append(
+                        {
+                            "name": name,
+                            "count": self._table_count(self._db_path, name),
+                            "kind": self._table_kind(self._db_path, name),
+                        }
+                    )
                 except Exception:
-                    continue  # tabla sin el esquema de mediciones
-            return out
+                    continue
+            return sorted(out, key=lambda item: (item["kind"] != "davis", item["name"]))
         except Exception as e:  # pragma: no cover - defensive
             self.logMessage.emit("SQLITE", "error", f"Error listando tablas: {e}")
             return []
@@ -317,13 +345,33 @@ class WebBridge(QObject):
             ``{ok: bool, error: str, table: str, rows: [{id, fecha, hora, irradiancia}]}``
         """
         try:
-            repo = IrradianceRepository(self._db_path, use_pool=False)
-            rows = repo.get_records(self._db_table, date_from or None, date_to or None, raise_on_error=True)
-            return {"ok": True, "error": "", "table": self._db_table, "rows": rows}
+            kind = self._table_kind(self._db_path, self._db_table)
+            if kind == "davis":
+                rows = self._load_davis_analysis(date_from or None, date_to or None)
+            elif kind == "legacy_irradiance":
+                repo = IrradianceRepository(self._db_path, use_pool=False)
+                rows = repo.get_records(self._db_table, date_from or None, date_to or None, raise_on_error=True)
+            else:
+                rows = []
+            return {
+                "ok": True,
+                "error": "",
+                "table": self._db_table,
+                "kind": kind,
+                "database": self._db_path,
+                "rows": rows,
+            }
         except Exception as e:  # pragma: no cover - defensive
             msg = str(e)
             self.logMessage.emit("SQLITE", "error", f"Error leyendo análisis: {msg}")
-            return {"ok": False, "error": msg, "table": self._db_table, "rows": []}
+            return {
+                "ok": False,
+                "error": msg,
+                "table": self._db_table,
+                "kind": "unknown",
+                "database": self._db_path,
+                "rows": [],
+            }
 
     def _davis_status_payload(self) -> dict:
         if self.davis is None:
@@ -366,7 +414,129 @@ class WebBridge(QObject):
     @pyqtSlot(result=str)
     def browseDbFile(self) -> str:
         """Open a native file dialog and return the chosen database path."""
+        return self.browseNewDbFile()
+
+    @pyqtSlot(result=str)
+    def browseNewDbFile(self) -> str:
+        """Open a native save dialog for a new SQLite database."""
         from PyQt6.QtWidgets import QFileDialog
 
-        path, _ = QFileDialog.getSaveFileName(None, "Base de datos SQLite", "", "SQLite (*.db *.sqlite)")
+        path, _ = QFileDialog.getSaveFileName(None, "Crear base SQLite", "", "SQLite (*.db *.sqlite *.sqlite3)")
         return path or ""
+
+    @pyqtSlot(result=str)
+    def browseExistingDbFile(self) -> str:
+        """Open a native open dialog for an existing SQLite database."""
+        from PyQt6.QtWidgets import QFileDialog
+
+        path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Abrir base SQLite existente",
+            "",
+            "SQLite (*.db *.sqlite *.sqlite3)",
+        )
+        return path or ""
+
+    def _activate_database(self, db_path: str, table: str) -> None:
+        self._db_path = db_path
+        self._write_db_path = db_path
+        self._db_table = table or DavisWeatherRepository.TABLE_NAME
+        if self.davis is not None and hasattr(self.davis, "configure_database_path"):
+            self.davis.configure_database_path(db_path)
+
+    def _preferred_table(self, db_path: str) -> str:
+        if self._table_exists(db_path, DavisWeatherRepository.TABLE_NAME):
+            return DavisWeatherRepository.TABLE_NAME
+        names = self._sqlite_table_names(db_path)
+        return names[0] if names else DavisWeatherRepository.TABLE_NAME
+
+    @staticmethod
+    def _sqlite_table_names(db_path: str) -> list[str]:
+        if not db_path:
+            return []
+        with sqlite3.connect(str(Path(db_path).expanduser())) as conn:
+            rows = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            ).fetchall()
+        return [str(row[0]) for row in rows]
+
+    @staticmethod
+    def _table_exists(db_path: str, table: str) -> bool:
+        if not db_path or not table:
+            return False
+        with sqlite3.connect(str(Path(db_path).expanduser())) as conn:
+            row = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ? LIMIT 1",
+                (table,),
+            ).fetchone()
+        return row is not None
+
+    @staticmethod
+    def _table_count(db_path: str, table: str) -> int:
+        safe_table = '"' + table.replace('"', '""') + '"'
+        with sqlite3.connect(str(Path(db_path).expanduser())) as conn:
+            row = conn.execute(f"SELECT COUNT(*) FROM {safe_table}").fetchone()
+        return int(row[0] if row else 0)
+
+    @staticmethod
+    def _table_columns(db_path: str, table: str) -> set[str]:
+        safe_table = table.replace('"', '""')
+        with sqlite3.connect(str(Path(db_path).expanduser())) as conn:
+            rows = conn.execute(f'PRAGMA table_info("{safe_table}")').fetchall()
+        return {str(row[1]) for row in rows}
+
+    def _table_kind(self, db_path: str, table: str) -> str:
+        if table == DavisWeatherRepository.TABLE_NAME:
+            return "davis"
+        columns = self._table_columns(db_path, table)
+        if {"fecha", "hora", "irradiancia"}.issubset(columns):
+            return "legacy_irradiance"
+        return "other"
+
+    def _load_davis_analysis(self, date_from: Optional[str], date_to: Optional[str]) -> list[dict]:
+        if not self._table_exists(self._db_path, DavisWeatherRepository.TABLE_NAME):
+            return []
+        clauses = []
+        params = []
+        if date_from:
+            clauses.append("date(timestamp) >= ?")
+            params.append(date_from)
+        if date_to:
+            clauses.append("date(timestamp) <= ?")
+            params.append(date_to)
+        where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+        rows = DavisWeatherRepository(self._db_path, use_pool=False).execute_query(
+            f"""
+            SELECT id, timestamp, solar_radiation_wm2, uv_index, temp_out_c,
+                   humidity_out, pressure_hpa, wind_speed_ms, quality, source
+            FROM {DavisWeatherRepository.TABLE_NAME}
+            {where}
+            ORDER BY timestamp
+            """,
+            tuple(params),
+        )
+        out = []
+        for row in rows or []:
+            date_part, time_part = self._split_timestamp(str(row[1]))
+            out.append(
+                {
+                    "id": row[0],
+                    "fecha": date_part,
+                    "hora": time_part,
+                    "irradiancia": row[2],
+                    "solar_radiation_wm2": row[2],
+                    "uv_index": row[3],
+                    "temp_out_c": row[4],
+                    "humidity_out": row[5],
+                    "pressure_hpa": row[6],
+                    "wind_speed_ms": row[7],
+                    "quality": row[8],
+                    "source": row[9],
+                }
+            )
+        return out
+
+    @staticmethod
+    def _split_timestamp(timestamp: str) -> tuple[str, str]:
+        clean = timestamp.replace("T", " ")
+        return clean[:10], clean[11:19] if len(clean) >= 19 else ""

@@ -21,6 +21,11 @@ const state = {
   panelEfficiency: 0.18,
   groupHistory: [],
   maxGroupHistory: 50000,
+  activeDatabase: {
+    path: './data/nexo_solar.db',
+    analysisTable: 'davis_weather_readings',
+  },
+  sqliteMode: 'existing',
   graphRangeHours: 1,
   graphZoom: {
     solar: 1,
@@ -688,42 +693,88 @@ function exitSafeState() {
 
 /* ===== SQLITE MODAL ===== */
 function openSQLiteModal() {
+  refreshActiveDatabase();
   document.getElementById('sqliteModal').classList.remove('hidden');
 }
 function closeSQLiteModal() {
   document.getElementById('sqliteModal').classList.add('hidden');
 }
-function browseDB() {
+function browseExistingDB() {
   if (bridge) {
-    bridge.browseDbFile(function (p) { if (p) document.getElementById('dbPath').value = p; });
+    bridge.browseExistingDbFile(function (p) {
+      if (p) {
+        state.sqliteMode = 'existing';
+        document.getElementById('dbPath').value = p;
+        document.getElementById('newTableName').value = '';
+        document.getElementById('dbModeHint').textContent = 'Base existente seleccionada. No se crearán registros de prueba.';
+      }
+    });
     return;
   }
-  document.getElementById('dbPath').value = './data/irradiancia_' + new Date().getFullYear() + '.db';
+  document.getElementById('dbPath').value = './data/nexo_solar.db';
+}
+function browseNewDB() {
+  if (bridge) {
+    bridge.browseNewDbFile(function (p) {
+      if (p) {
+        state.sqliteMode = 'new';
+        document.getElementById('dbPath').value = p;
+        document.getElementById('newTableName').value = 'mediciones';
+        document.getElementById('dbModeHint').textContent = 'Base nueva seleccionada. Se creará vacía y Davis registrará lecturas reales.';
+      }
+    });
+    return;
+  }
+  state.sqliteMode = 'new';
+  document.getElementById('dbPath').value = './data/nexo_solar_' + new Date().getFullYear() + '.db';
+  document.getElementById('newTableName').value = 'mediciones';
 }
 function acceptSQLite() {
   const path = document.getElementById('dbPath').value;
-  const table = document.getElementById('newTableName').value || document.getElementById('tableSelect').value;
-  if (!table || table === '-- Seleccionar tabla --') {
+  const selectedTable = document.getElementById('tableSelect').value;
+  const table = document.getElementById('newTableName').value || selectedTable || 'mediciones';
+  const openExistingOnly = state.sqliteMode === 'existing' && !document.getElementById('newTableName').value;
+  if (!openExistingOnly && (!table || table === '-- Seleccionar tabla --')) {
     showToast('Selecciona o crea una tabla', 'error'); return;
   }
   if (bridge) {
-    bridge.configureSqlite(path, table, function (ok) {
+    const done = function (ok) {
       closeSQLiteModal();
       if (ok) {
-        addLog(`[SQLite] Base de datos configurada: ${path} → tabla: ${table}`, 'info');
+        addLog(`[SQLite] Base de datos activa: ${path}${openExistingOnly ? '' : ' → tabla: ' + table}`, 'info');
         showToast('Base de datos configurada correctamente');
+        refreshActiveDatabase();
         populateTableSelect();
         loadDavisHistory();
+        if (document.getElementById('tab-datos').classList.contains('active')) loadAnalysisData();
       } else {
         addLog('[SQLite] Error configurando la base de datos', 'error');
         showToast('Error configurando SQLite', 'error');
       }
-    });
+    };
+    if (openExistingOnly && bridge.connectExistingSqlite) bridge.connectExistingSqlite(path, done);
+    else bridge.configureSqlite(path, table, done);
     return;
   }
   closeSQLiteModal();
   addLog(`[SQLite] Base de datos configurada: ${path} → tabla: ${table}`, 'info');
   showToast('Base de datos configurada correctamente');
+}
+
+function refreshActiveDatabase() {
+  if (!bridge || !bridge.getActiveDatabase) return;
+  bridge.getActiveDatabase(function (db) {
+    if (!db) return;
+    state.activeDatabase = db;
+    const dbPathInput = document.getElementById('dbPath');
+    if (dbPathInput) dbPathInput.value = db.path || state.activeDatabase.path;
+    const tableInput = document.getElementById('newTableName');
+    if (tableInput) tableInput.value = '';
+    const hint = document.getElementById('dbModeHint');
+    if (hint) hint.textContent = `Base activa: ${db.path || '--'} · tabla Davis: ${db.davis_table || 'davis_weather_readings'}`;
+    const activeDbLabel = document.getElementById('anaActiveDb');
+    if (activeDbLabel) activeDbLabel.textContent = db.path || '--';
+  });
 }
 
 /* ===== TOAST ===== */
@@ -1498,6 +1549,7 @@ const ANA_PAGE_SIZE = 20;
 let anaSortKey = 'id';
 let anaSortAsc = true;
 let anaView = 'day';
+let anaKind = 'davis';
 
 /* ----- Canvases ----- */
 let anaHistCtx, anaDistCtx, anaHeatCtx, anaHourCtx;
@@ -1519,16 +1571,22 @@ function markDatesTouched() { anaDatesTouched = true; }
 function populateTableSelect() {
   const sel = document.getElementById('anaTableSelect');
   if (!sel || !bridge) return;
+  refreshActiveDatabase();
   bridge.listTables(function (tables) {
     if (!tables || !tables.length) {
-      sel.innerHTML = '<option value="">Sin tablas de irradiancia</option>';
+      sel.innerHTML = '<option value="">Sin tablas en la base activa</option>';
       return;
     }
     sel.innerHTML = '';
     tables.forEach(t => {
       const o = document.createElement('option');
       o.value = t.name;
-      o.textContent = `${t.name} (${t.count.toLocaleString()})`;
+      o.dataset.kind = t.kind || 'other';
+      const label = t.kind === 'davis' ? 'Davis' : t.kind === 'legacy_irradiance' ? 'Heredada' : 'Otro esquema';
+      o.textContent = `${label}: ${t.name} (${t.count.toLocaleString()})`;
+      if (state.activeDatabase.analysis_table === t.name || state.activeDatabase.analysisTable === t.name) {
+        o.selected = true;
+      }
       sel.appendChild(o);
     });
     sel.onchange = () => {
@@ -1568,6 +1626,7 @@ function loadAnalysisData() {
       // El bridge distingue "consulta falló" de "tabla vacía": son cosas
       // distintas y el usuario tiene que poder diferenciarlas.
       const rows = (res && res.rows) || [];
+      anaKind = (res && res.kind) || 'unknown';
       if (rows.length) {
         finish(rows, true, '');
         return;
@@ -2040,13 +2099,14 @@ function renderTable() {
 
 function renderTablePage() {
   const tbody = document.getElementById('dataTableBody');
+  renderTableHeader();
   const start = anaPage * ANA_PAGE_SIZE;
   const slice = tableFiltered.slice(start, start + ANA_PAGE_SIZE);
   const total = tableFiltered.length;
   const pages = Math.ceil(total / ANA_PAGE_SIZE);
 
   if (!total) {
-    tbody.innerHTML = '<tr><td colspan="5">Sin registros. La tabla empezará a llenarse con lecturas reales de la estación.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${dataColumnCount()}">Sin registros. La tabla empezará a llenarse con lecturas reales de la estación.</td></tr>`;
     document.getElementById('tableCount').textContent = 'mostrando 0 de 0';
     document.getElementById('pageInfo').textContent = 'Página 1 de 1';
     return;
@@ -2055,6 +2115,22 @@ function renderTablePage() {
   tbody.innerHTML = slice.map(r => {
     const q = r.irradiancia > 50 ? 'Good' : r.irradiancia > 0 ? 'Warn' : 'Bad';
     const qClass = q === 'Good' ? 'quality-good' : q === 'Warn' ? 'quality-warn' : 'quality-bad';
+    if (anaKind === 'davis') {
+      const quality = r.quality || q;
+      const qualityClass = quality === 'valid' || quality === 'Good' ? 'quality-good' : 'quality-warn';
+      return `<tr>
+        <td>${r.id}</td>
+        <td>${r.fecha}</td>
+        <td>${r.hora}</td>
+        <td class="irr-val">${numberOrDash(r.solar_radiation_wm2, 1)}</td>
+        <td>${numberOrDash(r.uv_index, 1)}</td>
+        <td>${numberOrDash(r.temp_out_c, 1)}</td>
+        <td>${numberOrDash(r.humidity_out, 0)}</td>
+        <td>${numberOrDash(r.pressure_hpa, 1)}</td>
+        <td>${numberOrDash(r.wind_speed_ms, 2)}</td>
+        <td class="${qualityClass}">${quality}</td>
+      </tr>`;
+    }
     return `<tr>
       <td>${r.id}</td>
       <td>${r.fecha}</td>
@@ -2070,10 +2146,45 @@ function renderTablePage() {
     `Página ${anaPage+1} de ${pages || 1}`;
 }
 
+function renderTableHeader() {
+  const head = document.getElementById('dataTableHead');
+  if (!head) return;
+  if (anaKind === 'davis') {
+    head.innerHTML = `
+      <th onclick="sortTable('id')"># <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('fecha')">Fecha <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('hora')">Hora <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('solar_radiation_wm2')">Radiación <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('uv_index')">UV <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('temp_out_c')">Temp. ext. <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('humidity_out')">Humedad <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('pressure_hpa')">Presión <span class="sort-icon">↕</span></th>
+      <th onclick="sortTable('wind_speed_ms')">Viento <span class="sort-icon">↕</span></th>
+      <th>Calidad</th>`;
+    return;
+  }
+  head.innerHTML = `
+    <th onclick="sortTable('id')"># <span class="sort-icon">↕</span></th>
+    <th onclick="sortTable('fecha')">Fecha <span class="sort-icon">↕</span></th>
+    <th onclick="sortTable('hora')">Hora <span class="sort-icon">↕</span></th>
+    <th onclick="sortTable('irradiancia')">Irradiancia (W/m²) <span class="sort-icon">↕</span></th>
+    <th>Calidad</th>`;
+}
+
+function dataColumnCount() {
+  return anaKind === 'davis' ? 10 : 5;
+}
+
+function numberOrDash(value, decimals) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '--';
+  return num.toFixed(decimals);
+}
+
 function filterTable(q) {
   q = q.toLowerCase();
   tableFiltered = tableData.filter(r =>
-    r.fecha.includes(q) || r.hora.includes(q) || String(r.irradiancia).includes(q)
+    Object.values(r).some(value => String(value ?? '').toLowerCase().includes(q))
   );
   anaPage = 0;
   renderTablePage();
@@ -2096,8 +2207,11 @@ function nextPage() {
 /* ----- Export CSV ----- */
 function exportCSV() {
   if (!anaFiltered.length) { showToast('Carga datos primero', 'error'); return; }
-  const header = 'id,fecha,hora,irradiancia\n';
-  const rows = anaFiltered.map(r => `${r.id},${r.fecha},${r.hora},${r.irradiancia}`).join('\n');
+  const columns = anaKind === 'davis'
+    ? ['id','fecha','hora','solar_radiation_wm2','uv_index','temp_out_c','humidity_out','pressure_hpa','wind_speed_ms','quality','source']
+    : ['id','fecha','hora','irradiancia'];
+  const header = columns.join(',') + '\n';
+  const rows = anaFiltered.map(r => columns.map(c => r[c] ?? '').join(',')).join('\n');
   const blob = new Blob([header + rows], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');

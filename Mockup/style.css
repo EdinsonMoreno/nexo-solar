@@ -605,6 +605,32 @@ button { color: inherit; }
   background: var(--panel);
 }
 
+.active-db-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(100%, 360px);
+  max-width: 100%;
+}
+
+.active-db-path {
+  min-width: 0;
+  max-width: min(58vw, 720px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 #anaTableSelect { width: min(260px, 100%); }
 .date-range-row .input-field { width: 150px; }
 
@@ -882,7 +908,9 @@ button { color: inherit; }
   .map-card { min-height: 420px; }
   .map-shell { min-height: 340px; }
   .date-range-row .input-field, .table-tools .input-field, #anaTableSelect { width: 100%; }
-  .db-source-row, .date-range-row, .table-tools, .doc-actions, .input-row { align-items: stretch; }
+  .db-source-row, .date-range-row, .table-tools, .doc-actions, .input-row, .active-db-line { align-items: stretch; }
+  .active-db-line { flex-direction: column; }
+  .active-db-path { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
   .db-source-row > *, .date-range-row > *, .table-tools > *, .doc-actions > *, .input-row > * { width: 100%; }
   .graph-toolbar { justify-content: flex-start; }
   .graph-toolbar .chip, .graph-toolbar .btn { flex: 1 1 auto; }

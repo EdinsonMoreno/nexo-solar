@@ -39,9 +39,10 @@ def test_davis_repository_create_table_starts_empty(tmp_path) -> None:
 def test_davis_repository_creates_table_and_stores_all_weather_fields(tmp_path) -> None:
     repo = DavisWeatherRepository(str(tmp_path / "nexo_solar.db"), use_pool=False)
     repo.create_table()
+    data = make_weather_data()
 
     repo.insert_reading(
-        make_weather_data(),
+        data,
         timestamp=datetime(2026, 9, 10, 6, 45, 17, tzinfo=timezone.utc),
         source="davis_usb",
     )
@@ -53,12 +54,8 @@ def test_davis_repository_creates_table_and_stores_all_weather_fields(tmp_path) 
     assert row["timestamp"] == "2026-09-10T06:45:17+00:00"
     assert row["source"] == "davis_usb"
     assert row["quality"] == "valid"
-    assert row["solar_radiation_wm2"] == 83.0
-    assert row["temp_out_c"] == 26.9
-    assert row["humidity_out"] == 81.0
-    assert row["pressure_hpa"] == 1007.1
-    assert row["wind_dir_deg"] == 189
-    assert row["uv_index"] == 0.5
+    for column in DavisWeatherRepository.WEATHER_COLUMNS:
+        assert row[column] == data.as_dict()[column]
 
 
 def test_davis_repository_returns_recent_rows_from_oldest_to_newest(tmp_path) -> None:

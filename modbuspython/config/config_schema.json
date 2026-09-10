@@ -50,6 +50,15 @@
           "description": "Path to SQLite database file",
           "type": "string"
         },
+        "analysis_path": {
+          "description": "Path to SQLite database file used by the Datos tab",
+          "type": "string"
+        },
+        "analysis_table": {
+          "description": "Default table used by the Datos tab",
+          "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+          "type": "string"
+        },
         "table_name": {
           "description": "Name of the measurements table",
           "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",

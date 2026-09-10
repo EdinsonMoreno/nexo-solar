@@ -43,10 +43,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "database": {
         "path": "data/nexo_solar.db",
         "table_name": "mediciones",
-        # Fuente de la pestaña Análisis. Se separa de la base de escritura
-        # porque el histórico medido en campo vive en su propio archivo.
-        "analysis_path": "data/irradiancia.db",
-        "analysis_table": "Prueba_RedColsi",
+        "analysis_path": "data/nexo_solar.db",
+        "analysis_table": "davis_weather_readings",
         "connection_pool_size": 5,
     },
     "logging": {

@@ -105,13 +105,11 @@ class DavisWeatherLinkReader(QThread):
     def configure_database_path(self, db_path: str) -> None:
         """Use another SQLite file for future Davis readings.
 
-        The table is created empty. Only valid LOOP readings are inserted later
-        by ``_save_reading``.
+        The table is created later by the first real save. Selecting an
+        existing database must not modify it before the station starts logging.
         """
         self._runtime_config["database_path"] = db_path
-        repository = DavisWeatherRepository(db_path=str(db_path), use_pool=False)
-        repository.create_table()
-        self.weather_repository = repository
+        self.weather_repository = None
         self.logger.info(f"Davis persistence configured: {db_path} -> {DavisWeatherRepository.TABLE_NAME}")
 
     def connect_station(self) -> bool:
@@ -323,6 +321,8 @@ class DavisWeatherLinkReader(QThread):
             return None
 
     def _save_reading(self, data: WeatherData) -> None:
+        if self.weather_repository is None:
+            self.weather_repository = self._build_weather_repository()
         if self.weather_repository is None:
             return
         try:

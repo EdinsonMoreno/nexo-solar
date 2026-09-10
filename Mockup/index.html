@@ -339,6 +339,10 @@
           </div>
 
           <div class="analysis-toolbar">
+            <div class="active-db-line">
+              <span class="field-label">Base activa</span>
+              <span class="active-db-path" id="anaActiveDb">data/nexo_solar.db</span>
+            </div>
             <div class="db-source-row">
               <span class="field-label">Fuente</span>
               <select class="input-field" id="anaTableSelect">
@@ -405,7 +409,7 @@
             <div class="data-table-wrapper">
               <table class="data-table" id="dataTable">
                 <thead>
-                  <tr>
+                  <tr id="dataTableHead">
                     <th onclick="sortTable('id')"># <span class="sort-icon">↕</span></th>
                     <th onclick="sortTable('fecha')">Fecha <span class="sort-icon">↕</span></th>
                     <th onclick="sortTable('hora')">Hora <span class="sort-icon">↕</span></th>
@@ -609,9 +613,11 @@
         <div class="field-group">
           <label class="field-label">Archivo de base de datos</label>
           <div class="input-row">
-            <input type="text" class="input-field" id="dbPath" value="./data/irradiancia.db" />
-            <button class="btn btn-outline" onclick="browseDB()">Cambiar...</button>
+            <input type="text" class="input-field" id="dbPath" value="./data/nexo_solar.db" />
+            <button class="btn btn-outline" onclick="browseExistingDB()">Abrir existente</button>
+            <button class="btn btn-secondary" onclick="browseNewDB()">Crear nueva</button>
           </div>
+          <span class="field-hint" id="dbModeHint">Base activa de Nexo Solar. Abrir una base existente no inserta datos.</span>
         </div>
         <div class="field-group">
           <label class="field-label">Tabla existente</label>
@@ -624,8 +630,8 @@
           <input type="text" class="input-field" id="newTableName" placeholder="nombre_tabla..." />
         </div>
         <div class="schema-info">
-          <span class="schema-label">Esquema:</span>
-          <code>id (AUTO), fecha (TEXT), hora (TEXT), irradiancia (REAL)</code>
+          <span class="schema-label">Davis:</span>
+          <code>davis_weather_readings se crea vacía cuando empiecen las lecturas reales.</code>
         </div>
       </div>
       <div class="modal-footer">
