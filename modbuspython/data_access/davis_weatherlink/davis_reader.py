@@ -27,10 +27,10 @@ class DavisWeatherLinkReader(QThread):
     retry_exhausted = pyqtSignal(str, str)
 
     WAKE_UP_BYTE = b"\x0a"
-    WAKE_UP_RESPONSE = b"\x0d\x0a"
+    WAKE_UP_RESPONSE = b"\x0a\x0d"
     WAKE_UP_TIMEOUT_S = 1.2
     WAKE_UP_ATTEMPTS = 3
-    LOOP_COMMAND = b"LOOP 1\r"
+    LOOP_COMMAND = b"LOOP 1\n"
     ACK = b"\x06"
     CRC_RETRY_DELAY_S = 0.5
 

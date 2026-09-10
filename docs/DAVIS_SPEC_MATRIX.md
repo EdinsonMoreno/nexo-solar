@@ -1,14 +1,14 @@
 # Davis WeatherLink - Matriz SPEC a implementacion y prueba
 
-Fuente primaria usada en esta fase: archivos locales
+Fuentes primarias usadas en esta fase: archivos locales
 `.kiro/specs/davis-weatherlink-reader/requirements.md`,
-`.kiro/specs/davis-weatherlink-reader/design.md` y
-`.kiro/specs/davis-weatherlink-reader/tasks.md`.
+`.kiro/specs/davis-weatherlink-reader/design.md`,
+`.kiro/specs/davis-weatherlink-reader/tasks.md` y documentacion oficial Davis
+disponible publicamente.
 
-No se uso documentacion externa de Davis ni hardware fisico. Los detalles de
-offsets, factores de lluvia y CRC quedan implementados segun el SPEC local y
-pendientes de validacion contra manual oficial o estacion real antes de pasar a
-QA funcional.
+No se uso hardware fisico. Los puntos que dependen de la configuracion real del
+equipo, especialmente colector de lluvia, puerto serial y firmware, quedan
+pendientes de validacion en laboratorio antes de pasar a QA funcional.
 
 ## Resumen de variables expuestas
 
@@ -35,10 +35,10 @@ QA funcional.
 | Req | Criterio SPEC | Implementacion | Prueba | Estado |
 |---|---|---|---|---|
 | 1 | Configurar transporte `serial` o `ip`, parametros Davis y `poll_interval_ms` | `config_defaults.py`, `default_config.yaml`, `config_schema.json`, `ConfigurationManager.davis_weatherlink_config`, `DavisWeatherLinkReader._build_transport()` | `test_davis_weatherlink_reader.py` cubre factory IP e invalid transport; validacion JSON ejecutada con `json.tool` | Completo local |
-| 2 | Wake-up LF y respuesta CR+LF con maximo 3 intentos | `DavisWeatherLinkReader._wake_up()` | Cubierto por test Qt de lector, omitido en este entorno por falta de PyQt6 | Implementado; prueba Qt pendiente en entorno completo |
-| 3 | Enviar `LOOP 1\r`, esperar ACK y leer 99 bytes | `DavisWeatherLinkReader._send_loop_command()` y `_read_packet()` | Cubierto por test Qt de lector, omitido en este entorno por falta de PyQt6 | Implementado; prueba Qt pendiente en entorno completo |
-| 4 | Calcular y validar CRC-16 CCITT bytes 0-96 contra bytes 97-98 BE | `CRCValidator` | `test_davis_weatherlink_crc.py` | Completo local; algoritmo pendiente contra fuente primaria Davis |
-| 5 | Decodificar LOOP a `WeatherData`, validar firma y round-trip texto | `PacketParser`, `WeatherData` | `test_davis_weatherlink_parser.py` | Completo local; offsets pendientes contra fuente primaria Davis |
+| 2 | Wake-up LF y respuesta LF+CR con maximo 3 intentos | `DavisWeatherLinkReader._wake_up()` | Cubierto por test Qt de lector, omitido en este entorno por falta de PyQt6 | Alineado con referencia Davis; prueba Qt pendiente en entorno completo |
+| 3 | Enviar `LOOP 1\n`, esperar ACK y leer 99 bytes | `DavisWeatherLinkReader._send_loop_command()` y `_read_packet()` | Cubierto por test Qt de lector, omitido en este entorno por falta de PyQt6 | Alineado con referencia Davis; prueba Qt pendiente en entorno completo |
+| 4 | Calcular y validar CRC-16 CCITT bytes 0-96 contra bytes 97-98 BE | `CRCValidator` | `test_davis_weatherlink_crc.py` incluye ejemplo Davis `C6 CE A2 03 -> E2 B4` | Algoritmo cubierto contra referencia oficial; validar LOOP real manana |
+| 5 | Decodificar LOOP a `WeatherData`, validar firma y round-trip texto | `PacketParser`, `WeatherData` | `test_davis_weatherlink_parser.py` | Offsets principales coinciden con referencia Davis; factores de lluvia dependen del colector y se validan con equipo |
 | 6 | QThread, señales, QTimer, stop limpio | `DavisWeatherLinkReader` | Cubierto por test Qt de lector, omitido en este entorno por falta de PyQt6 | Implementado; prueba Qt pendiente en entorno completo |
 | 7 | RetryStrategy con backoff 2.0 y agotamiento de reintentos | `DavisWeatherLinkReader.retry_strategy` y `_execute_with_retry()` | Cubierto por test Qt de lector, omitido en este entorno por falta de PyQt6; `RetryStrategy` ya tiene tests propios | Implementado; prueba Qt pendiente en entorno completo |
 | 8 | Logging centralizado para conexion, polling, CRC, lecturas y fallos | `LoggingService` usado en `DavisWeatherLinkReader`, `CRCValidator`, transportes | Validado por inspeccion y pruebas existentes de logging; sin hardware para logs reales | Parcial por falta de prueba funcional con dispositivo |
@@ -52,8 +52,9 @@ QA funcional.
 
 - Instalar dependencias de entorno (`PyQt6` y `pyserial`) y ejecutar los tests
   Qt del lector.
-- Validar offsets, CRC y factores de lluvia contra manual oficial de Davis
-  Instruments o contra paquetes capturados de una Davis Vantage Pro2 real.
+- Validar con equipo real que el orden de bytes recibido por el adaptador USB/IP
+  coincide con la referencia Davis y que la configuracion del colector de lluvia
+  corresponde a 0.01 in o 0.2 mm por click.
 - Hacer una prueba funcional con serial VCP y otra con transporte IP si el SENA
   usara ese modo.
 - Revisar si la lectura Davis debe persistirse en SQLite junto a irradiancia o

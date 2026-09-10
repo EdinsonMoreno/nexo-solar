@@ -17,7 +17,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 - **Serial_Transport**: Capa de transporte que gestiona la comunicación sobre el puerto serie VCP (Virtual COM Port).
 - **IP_Transport**: Capa de transporte alternativa que gestiona la comunicación sobre TCP/IP (WeatherLink IP o adaptador de red compatible).
 - **Transport**: Término genérico que engloba tanto Serial_Transport como IP_Transport.
-- **Wake_Up_Sequence**: Protocolo de activación de la consola Davis que consiste en enviar LF (0x0A) y esperar la respuesta CR+LF (0x0D 0x0A).
+- **Wake_Up_Sequence**: Protocolo de activación de la consola Davis que consiste en enviar LF (0x0A) y esperar la respuesta LF+CR (0x0A 0x0D), según la referencia de comunicaciones Davis.
 - **WeatherData**: Estructura de datos que contiene todas las variables meteorológicas decodificadas de un LOOP_Packet.
 - **ConfigurationManager**: Singleton existente en SolarSense que gestiona la configuración mediante config.yaml.
 - **LoggingService**: Singleton existente en SolarSense para logging centralizado con rotación de ficheros.
@@ -51,8 +51,8 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 #### Criterios de Aceptación
 
 1. WHEN el `Davis_Reader` inicia la comunicación con la consola, THE `Davis_Reader` SHALL enviar el byte LF (0x0A) al Transport activo para iniciar la Wake_Up_Sequence.
-2. WHEN se envía el byte LF (0x0A), THE `Davis_Reader` SHALL esperar una respuesta de exactamente los bytes CR+LF (0x0D 0x0A) en un plazo máximo de 1200 ms.
-3. IF la respuesta CR+LF no se recibe en 1200 ms, THEN THE `Davis_Reader` SHALL reintentar la Wake_Up_Sequence hasta un máximo de 3 intentos antes de declarar el transporte no disponible.
+2. WHEN se envía el byte LF (0x0A), THE `Davis_Reader` SHALL esperar una respuesta de exactamente los bytes LF+CR (0x0A 0x0D) en un plazo máximo de 1200 ms.
+3. IF la respuesta LF+CR no se recibe en 1200 ms, THEN THE `Davis_Reader` SHALL reintentar la Wake_Up_Sequence hasta un máximo de 3 intentos antes de declarar el transporte no disponible.
 4. IF la consola no responde después de 3 intentos de Wake_Up_Sequence, THEN THE `Davis_Reader` SHALL emitir la señal `connection_lost` con un mensaje descriptivo del fallo y registrar el evento en `LoggingService`.
 5. WHEN la Wake_Up_Sequence se completa con éxito, THE `Davis_Reader` SHALL registrar el evento en `LoggingService` con nivel DEBUG y proceder al envío del comando LOOP.
 
@@ -64,7 +64,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 
 #### Criterios de Aceptación
 
-1. WHEN la Wake_Up_Sequence se ha completado con éxito, THE `Davis_Reader` SHALL enviar al Transport la secuencia de bytes `[0x4C, 0x4F, 0x4F, 0x50, 0x20, 0x31, 0x0D]` (correspondiente al comando `LOOP 1` + CR).
+1. WHEN la Wake_Up_Sequence se ha completado con éxito, THE `Davis_Reader` SHALL enviar al Transport la secuencia de bytes `[0x4C, 0x4F, 0x4F, 0x50, 0x20, 0x31, 0x0A]` (correspondiente al comando `LOOP 1` + LF).
 2. WHEN se envía el comando LOOP, THE `Davis_Reader` SHALL esperar la recepción del byte ACK (0x06) como confirmación de la consola en un plazo máximo definido por el parámetro `timeout`.
 3. AFTER recibir el ACK, THE `Davis_Reader` SHALL leer exactamente 99 bytes del Transport como el LOOP_Packet.
 4. IF el byte ACK no se recibe en el plazo de `timeout`, THEN THE `Davis_Reader` SHALL registrar el fallo en `LoggingService` con nivel WARNING y delegar el reintento a `RetryStrategy`.

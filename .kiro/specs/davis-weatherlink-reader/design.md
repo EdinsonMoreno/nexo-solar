@@ -353,14 +353,14 @@ sequenceDiagram
 
     Timer->>Reader: timeout() → _read_cycle()
     Reader->>Transport: send(0x0A)  [Wake-Up LF]
-    Transport-->>Reader: recv(2, timeout=1.2s) → [0x0D, 0x0A]
+    Transport-->>Reader: recv(2, timeout=1.2s) → [0x0A, 0x0D]
     alt Wake-Up failed (timeout / wrong bytes)
         Reader->>Reader: retry (max 3 intentos)
         Reader->>UI: connection_changed(False)
         Reader->>UI: retry_exhausted("Wake-Up", msg)
     end
 
-    Reader->>Transport: send([0x4C,0x4F,0x4F,0x50,0x20,0x31,0x0D])  [LOOP 1\r]
+    Reader->>Transport: send([0x4C,0x4F,0x4F,0x50,0x20,0x31,0x0A])  [LOOP 1\n]
     Transport-->>Reader: recv(1, timeout) → [0x06]  [ACK]
     alt ACK timeout
         Reader->>Reader: RetryStrategy.execute_with_retry

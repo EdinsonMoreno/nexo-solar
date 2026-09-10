@@ -104,8 +104,8 @@ Implementación bottom-up del módulo `DavisWeatherLinkReader` en Python/PyQt6, 
   - [ ] 8.1 Implementar `modbuspython/data_access/davis_weatherlink/davis_reader.py`
     - Heredar de `QThread`, declarar señales `weather_data_updated`, `connection_changed`, `log`, `retry_exhausted`
     - Implementar `_build_transport()` con factory según `ConfigurationManager`
-    - Implementar `_wake_up()`: enviar 0x0A, esperar CR+LF en 1200 ms
-    - Implementar `_send_loop_command()`: enviar bytes `LOOP 1\r`, esperar ACK 0x06
+    - Implementar `_wake_up()`: enviar 0x0A, esperar LF+CR en 1200 ms
+    - Implementar `_send_loop_command()`: enviar bytes `LOOP 1\n`, esperar ACK 0x06
     - Implementar `_read_packet()`: leer 99 bytes del transport
     - Implementar `_read_cycle()`: orchestrar wake-up → comando → lectura → CRC → parse → validación rangos → emit
     - Implementar `_validate_ranges(data: WeatherData) -> bool` con los rangos de requisito 11

@@ -25,3 +25,10 @@ def test_crc_validator_rejects_packet_with_changed_payload() -> None:
 
 def test_crc_validator_rejects_invalid_packet_length() -> None:
     assert not CRCValidator().validate(b"short")
+
+
+def test_crc_matches_davis_reference_example() -> None:
+    """Davis reference example C6 CE A2 03 produces CRC E2 B4."""
+    payload = bytes.fromhex("C6 CE A2 03")
+
+    assert CRCValidator().calculate_crc(payload) == 0xE2B4

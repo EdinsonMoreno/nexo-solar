@@ -91,7 +91,7 @@ def make_reader(transport: FakeTransport) -> DavisWeatherLinkReader:
 
 
 def test_reader_performs_wake_up_loop_read_and_emits_weather_data() -> None:
-    transport = FakeTransport([b"\r\n", b"\x06", make_loop_packet()])
+    transport = FakeTransport([b"\n\r", b"\x06", make_loop_packet()])
     reader = make_reader(transport)
     readings = []
     connection_states = []
@@ -101,7 +101,7 @@ def test_reader_performs_wake_up_loop_read_and_emits_weather_data() -> None:
     data = reader.read_once()
 
     assert data is not None
-    assert transport.sent == [b"\x0a", b"LOOP 1\r"]
+    assert transport.sent == [b"\x0a", b"LOOP 1\n"]
     assert readings == [data]
     assert connection_states == [True]
     assert data.solar_radiation_wm2 == 925
