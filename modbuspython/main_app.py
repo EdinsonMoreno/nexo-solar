@@ -11,7 +11,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtGui import QPalette, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from typing import Optional
 from .ui.web_dashboard import WebDashboard
 from .data_access.modbus_client import ModbusClient as ModbusManager
@@ -210,6 +210,45 @@ class MainWindow(QMainWindow):
             sys.stderr.write(f"Error closing log handlers: {e}\n")
 
 
+def _update_startup_progress(app: QApplication, splash: NexoSolarSplashScreen, value: int, message: str) -> None:
+    """Update the splash screen and let Qt repaint during startup."""
+    splash.set_progress(value, message)
+    app.processEvents()
+
+
+def _finish_splash_when_dashboard_is_ready(
+    app: QApplication,
+    splash: NexoSolarSplashScreen,
+    window: MainWindow,
+    logger: LoggingService,
+) -> None:
+    """Close the splash screen after the embedded dashboard finishes loading."""
+    finished = {"done": False}
+
+    def finish(ok: bool, message: str) -> None:
+        if finished["done"]:
+            return
+        finished["done"] = True
+        if ok:
+            _update_startup_progress(app, splash, 100, message)
+        else:
+            logger.error(message)
+            splash.set_error(message)
+            app.processEvents()
+        QTimer.singleShot(350, lambda: splash.finish(window))
+
+    dashboard = getattr(window, "dashboard", None)
+    web_view = getattr(dashboard, "view", None)
+    if web_view is None:
+        finish(False, "No se pudo preparar la interfaz web.")
+        return
+
+    web_view.loadFinished.connect(
+        lambda ok: finish(ok, "Nexo Solar listo para operar." if ok else "La interfaz web cargó con errores.")
+    )
+    QTimer.singleShot(7000, lambda: finish(True, "Abriendo interfaz principal..."))
+
+
 def main() -> int:
     """Run the Nexo Solar application.
 
@@ -225,26 +264,34 @@ def main() -> int:
     if hasattr(sys, "_MEIPASS"):
         os.chdir(sys._MEIPASS)
 
-    # Load configuration at startup
-    from .config.config_manager import ConfigurationManager
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+
+    splash = NexoSolarSplashScreen()
+    splash.show()
+    _update_startup_progress(app, splash, 8, "Iniciando entorno de escritorio...")
 
     config = ConfigurationManager()
     config_path = Path("config.yaml")
     schema_path = Path("modbuspython/config/config_schema.json")
 
+    _update_startup_progress(app, splash, 20, "Cargando configuración local...")
     try:
         config.load_config(config_path, schema_path)
     except FileNotFoundError as e:
         # Schema file is required - cannot proceed without it
+        splash.set_error("No se encontró el esquema de configuración.")
+        app.processEvents()
         sys.stderr.write(f"CRITICAL: Configuration schema not found: {e}\n")
         sys.stderr.write("Application cannot start without config_schema.json\n")
-        sys.exit(1)
+        return 1
     except Exception as e:
         # Other errors during config load - log and use defaults
         sys.stderr.write(f"WARNING: Error loading configuration: {e}\n")
         sys.stderr.write("Using default configuration values\n")
 
     # Initialize logging service with configuration
+    _update_startup_progress(app, splash, 34, "Preparando registro de eventos...")
     logger = LoggingService()
     logging_config = config.logging_config
     logger.setup(
@@ -257,6 +304,7 @@ def main() -> int:
     logger.info(f"Configuration loaded from: {config_path}")
 
     # Verify schema version and apply pending migrations on startup (Requirement 13.7)
+    _update_startup_progress(app, splash, 50, "Verificando base de datos...")
     db_config = config.database_config
     db_path = db_config.get("path", "nexo_solar.db")
     try:
@@ -292,13 +340,8 @@ def main() -> int:
     except Exception as e:
         logger.warning(f"Could not verify schema version or apply migrations: {e}. Continuing with startup.")
 
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
-    # Pantalla de carga futurista
-    splash = NexoSolarSplashScreen()
-    splash.show()
-    app.processEvents()
     # Paleta base de escritorio; la interfaz principal vive en QWebEngine.
+    _update_startup_progress(app, splash, 66, "Aplicando tema de escritorio...")
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window, QColor(188, 190, 192))
     palette.setColor(QPalette.ColorRole.Base, QColor(224, 224, 224))
@@ -308,11 +351,19 @@ def main() -> int:
     palette.setColor(QPalette.ColorRole.Highlight, QColor(0, 95, 163))
     palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
     app.setPalette(palette)
-    # Simular carga de módulos pesados (puedes actualizar el mensaje dinámico aquí)
-    splash.set_dynamic_message("Cargando módulos principales...")
-    window = MainWindow(config=config)
+
+    _update_startup_progress(app, splash, 78, "Cargando servicios y sensores...")
+    try:
+        window = MainWindow(config=config)
+    except Exception as e:
+        logger.exception(f"Critical error during main window startup: {e}")
+        splash.set_error("No se pudo iniciar la ventana principal.")
+        app.processEvents()
+        raise
+
+    splash.set_progress(92, "Preparando interfaz web...")
     window.show()
-    splash.finish(window)
+    _finish_splash_when_dashboard_is_ready(app, splash, window, logger)
     logger.info("Nexo Solar application started successfully")
     return int(app.exec())
 

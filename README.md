@@ -1,14 +1,14 @@
 # Nexo Solar
 
-Repositorio privado del proyecto SCADA del SENA CIDT de Barrancabermeja. La aplicación, escrita en Python y PyQt6, adquiere irradiancia y posiciones del seguidor mediante Modbus TCP, calcula la posición solar y conserva datos en SQLite.
+Repositorio privado del proyecto Nexo Solar del SENA CIDT de Barrancabermeja. La aplicación, escrita en Python y PyQt6, adquiere variables meteorológicas desde Davis WeatherLink por USB/Serial o IP, calcula indicadores solares y conserva datos en SQLite.
 
-> **Estado actual:** la interfaz operativa está en `modbuspython/ui/` y utiliza PyQt6, `Mockup/` y `modbuspython/ui/web_dashboard.py`. Davis WeatherLink no está implementado; solo está especificado en `.kiro/specs/davis-weatherlink-reader/`.
+> **Estado actual:** la interfaz operativa está en `Mockup/` y se ejecuta embebida en PyQt6 mediante `modbuspython/ui/web_dashboard.py`. El backend Davis WeatherLink vive en `modbuspython/data_access/davis_weatherlink/`.
 
 ## Requisitos
 
 - Python 3.10 o posterior.
 - Dependencias de `requirements.txt`.
-- Para usar datos reales: un dispositivo Modbus TCP (el ejemplo usa un ESP8266) accesible desde el equipo.
+- Para usar datos reales: una estación Davis con datalogger USB/Serial o un logger IP compatible.
 - En Linux, las bibliotecas del sistema necesarias para Qt pueden ser requeridas por la distribución.
 
 ## Instalación y primera ejecución
@@ -30,7 +30,7 @@ python run.py
 
 ## Uso y UI
 
-`run.py` prepara el `PYTHONPATH` e invoca `modbuspython.main_app:main`; no ejecute `modbuspython/main_app.py` como script. La ventana integra monitor, ubicación, cálculo solar, control manual, diagnóstico y documentación. `Mockup/` contiene una maqueta web y `WebDashboard` es el dashboard web embebido; no son un servidor independiente.
+`run.py` prepara el `PYTHONPATH` e invoca `modbuspython.main_app:main`; no ejecute `modbuspython/main_app.py` como script. Al iniciar, la aplicación muestra una pantalla de carga con barra de progreso mientras prepara configuración, base de datos, servicios e interfaz web.
 
 ## Pruebas y CI
 
