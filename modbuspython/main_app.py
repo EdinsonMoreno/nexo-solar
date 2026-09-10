@@ -72,17 +72,22 @@ class MainWindow(QMainWindow):
         modbus_defaults = DEFAULT_CONFIG["modbus"]
         if self.config:
             modbus_config = self.config.modbus_config
+            modbus_enabled = bool(modbus_config.get("enabled", modbus_defaults.get("enabled", False)))
             modbus_host = modbus_config.get("host", modbus_defaults["host"])
             modbus_port = modbus_config.get("port", modbus_defaults["port"])
         else:
+            modbus_enabled = bool(modbus_defaults.get("enabled", False))
             modbus_host = modbus_defaults["host"]
             modbus_port = modbus_defaults["port"]
 
         self.logger.debug(f"Creating ModbusManager with host={modbus_host}, port={modbus_port}")
         self.modbus_manager = ModbusManager(ip=modbus_host, port=modbus_port, config_manager=self.config)
         self.modbus_manager.retry_exhausted.connect(self._on_retry_exhausted)
-        self.modbus_manager.start()
-        self.logger.debug("ModbusClient thread started")
+        if modbus_enabled:
+            self.modbus_manager.start()
+            self.logger.debug("ModbusClient thread started")
+        else:
+            self.logger.info("ModbusClient startup skipped because modbus.enabled=false")
 
     def _setup_davis_reader(self) -> None:
         """Initialize the Davis WeatherLink reader thread."""

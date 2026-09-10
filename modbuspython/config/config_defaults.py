@@ -15,6 +15,7 @@ from modbuspython.exceptions import ConfigurationError
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "modbus": {
+        "enabled": False,
         "host": "192.168.1.100",
         "port": 502,
         "timeout": 5.0,

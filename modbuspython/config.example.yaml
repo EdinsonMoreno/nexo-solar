@@ -3,6 +3,7 @@
 
 # Modbus TCP Communication Settings
 modbus:
+  enabled: false          # Enable only if a legacy Modbus TCP device is present
   host: "192.168.1.100"  # ESP8266 IP address - CHANGE THIS
   port: 502              # Modbus TCP port
   timeout: 5.0           # Connection timeout in seconds

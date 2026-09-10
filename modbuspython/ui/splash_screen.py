@@ -25,7 +25,7 @@ class NexoSolarSplashScreen(QSplashScreen):
         self.setWindowOpacity(0.97)
         # Texto principal
         self.label = QLabel("Nexo Solar", self)
-        self.label.setStyleSheet("color: #00ffe7; font-size: 32px; font-weight: bold; text-shadow: 0 0 8px #00ffe7;")
+        self.label.setStyleSheet("color: #00ffe7; font-size: 32px; font-weight: bold;")
         self.label.setFont(QFont("Consolas", 28, QFont.Weight.Bold))
         self.label.move(40, 40)
         # Subtítulo
