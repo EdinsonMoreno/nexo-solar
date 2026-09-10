@@ -13,6 +13,14 @@ const state = {
   diagAutoRead: true,
   davisConnected: false,
   davisLastRead: null,
+  davisWeather: null,
+  demoWeatherActive: false,
+  lastEnergyAt: null,
+  siteEnergyKwhM2: 0,
+  panelAreaM2: 1,
+  panelEfficiency: 0.18,
+  groupHistory: [],
+  maxGroupHistory: 180,
   diagUpdateCount: 0,
   docMode: 'html',
 };
@@ -21,30 +29,53 @@ const state = {
 window.addEventListener('DOMContentLoaded', () => {
   initGauge();
   initChart();
+  initGroupCharts();
   initLog();
   initDiagLog();
   loadDoc();
   updateLocationInfo();
+  updateHomeSummary();
+  updatePanelConfig();
   // Use the Python backend if embedded in QWebEngine; otherwise simulate.
   if (!initBridge()) startSimulation();
 });
 
 /* ===== TABS ===== */
 function switchTab(name) {
-  const tabs = ['monitor', 'ubicacion', 'davis', 'diagnostico', 'analisis', 'documentacion'];
+  const tabs = ['inicio', 'davis', 'graficas', 'ubicacion', 'datos', 'diagnostico', 'configuracion', 'documentacion'];
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === name);
   });
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
+  const title = document.getElementById('viewTitle');
+  if (title) title.textContent = tabsLabel(name);
 
   if (name === 'ubicacion') refreshMapSize();
 
-  if (name === 'analisis') {
+  if (name === 'datos') {
     initAnalysisCanvases();
     populateTableSelect();
     if (!anaData.length) loadAnalysisData(); else renderAll();
   }
+
+  if (name === 'graficas') {
+    drawGroupCharts();
+  }
+}
+
+function tabsLabel(name) {
+  const labels = {
+    inicio: 'Inicio',
+    davis: 'Estación Davis',
+    graficas: 'Gráficas',
+    ubicacion: 'Ubicación',
+    datos: 'Datos',
+    diagnostico: 'Diagnóstico',
+    configuracion: 'Configuración',
+    documentacion: 'Documentación',
+  };
+  return labels[name] || 'Nexo Solar';
 }
 
 /* ===== GAUGE ===== */
@@ -172,7 +203,7 @@ function drawChart() {
 
 function setChartRange(n, btn) {
   state.chartRange = n;
-  document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tab-inicio .chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
 
@@ -193,7 +224,14 @@ function tick() {
 
 // Apply an irradiance reading from EITHER the simulation OR the Python bridge.
 function applyIrradiance(value) {
+  integrateSolarEnergy(value);
   state.irradiance = value;
+  if (!state.davisConnected) {
+    const demoWeather = mockWeatherFromIrradiance(value);
+    state.davisWeather = demoWeather;
+    state.demoWeatherActive = true;
+    pushGroupHistory(demoWeather);
+  }
 
   state.buffer.push(value);
   if (state.buffer.length > 200) state.buffer.shift();
@@ -204,7 +242,17 @@ function applyIrradiance(value) {
   state.sumVal += value; state.countVal++;
 
   updateMonitorUI();
+  updateHomeSummary();
   if (state.diagConnected && state.diagAutoRead) updateDiagUI();
+}
+
+function integrateSolarEnergy(value) {
+  const now = Date.now();
+  if (state.lastEnergyAt) {
+    const elapsedHours = Math.min((now - state.lastEnergyAt) / 3600000, 1 / 12);
+    state.siteEnergyKwhM2 += Math.max(value, 0) * elapsedHours / 1000;
+  }
+  state.lastEnergyAt = now;
 }
 
 /* ===== PYTHON BRIDGE (QWebChannel) ===== */
@@ -249,18 +297,21 @@ function setConnectionUI(connected) {
   const sensorLed = document.getElementById('diagLedSensor');
   const estado = document.getElementById('diagEstado');
   const connDot = document.getElementById('connDot');
+  const shellStatus = document.getElementById('shellStatusText');
   if (connected) {
     if (btn) { btn.textContent = 'Desconectar'; btn.className = 'btn btn-danger full-width'; }
     if (led) led.className = 'led green';
     if (sensorLed) sensorLed.className = 'led green';
     if (estado) estado.textContent = 'Conectado';
     if (connDot) connDot.className = 'status-dot green';
+    if (shellStatus) shellStatus.textContent = 'Conectado';
   } else {
     if (btn) { btn.textContent = 'Conectar'; btn.className = 'btn btn-primary full-width'; }
     if (led) led.className = 'led red';
     if (sensorLed) sensorLed.className = 'led red';
     if (estado) estado.textContent = 'Desconectado';
     if (connDot) connDot.className = 'status-dot red';
+    if (shellStatus) shellStatus.textContent = 'Desconectado';
   }
 }
 
@@ -288,10 +339,14 @@ function setDavisConnectionUI(connected, message) {
   if (led) led.className = 'led ' + (connected ? 'green' : 'red');
   if (text) text.textContent = message || (connected ? 'Conectado' : 'Desconectado');
   if (btn) btn.disabled = !!connected;
+  updateHomeSummary();
 }
 
 function updateDavisWeather(data) {
   state.davisLastRead = new Date();
+  state.davisWeather = data || {};
+  state.demoWeatherActive = false;
+  pushGroupHistory(state.davisWeather);
   setDavisValue('weatherSolar', data.solar_radiation_wm2, ' W/m²', 0);
   setDavisValue('weatherTempOut', data.temp_out_c, ' °C', 1);
   setDavisValue('weatherTempIn', data.temp_in_c, ' °C', 1);
@@ -309,6 +364,8 @@ function updateDavisWeather(data) {
   setDavisValue('weatherUv', data.uv_index, '', 1);
   const last = document.getElementById('davisLastRead');
   if (last) last.textContent = 'Última lectura: ' + state.davisLastRead.toLocaleTimeString('es-CO', { hour12: false });
+  updateHomeSummary();
+  drawGroupCharts();
   if (typeof data.solar_radiation_wm2 === 'number') applyIrradiance(data.solar_radiation_wm2);
 }
 
@@ -320,6 +377,53 @@ function setDavisValue(id, value, unit, digits) {
     return;
   }
   el.textContent = value.toFixed(digits) + unit;
+}
+
+function fmtValue(value, digits = 1, fallback = '--') {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : fallback;
+}
+
+function updatePanelConfig() {
+  const area = parseFloat(document.getElementById('panelAreaInput')?.value);
+  const efficiencyPercent = parseFloat(document.getElementById('panelEfficiencyInput')?.value);
+  if (Number.isFinite(area) && area > 0) state.panelAreaM2 = area;
+  if (Number.isFinite(efficiencyPercent) && efficiencyPercent > 0) {
+    state.panelEfficiency = efficiencyPercent / 100;
+  }
+  updateHomeSummary();
+}
+
+function updateHomeSummary() {
+  const panelEnergy = state.siteEnergyKwhM2 * state.panelAreaM2 * state.panelEfficiency;
+  const siteEl = document.getElementById('siteEnergyDisplay');
+  const panelEl = document.getElementById('panelEnergyDisplay');
+  const panelSub = document.getElementById('panelEnergySub');
+  const lastPill = document.getElementById('lastReadPill');
+  const davisState = document.getElementById('homeDavisState');
+  const davisLast = document.getElementById('homeDavisLast');
+  const weatherSummary = document.getElementById('homeWeatherSummary');
+  const windSummary = document.getElementById('homeWindSummary');
+
+  if (siteEl) siteEl.textContent = state.siteEnergyKwhM2.toFixed(3) + ' kWh/m²';
+  if (panelEl) panelEl.textContent = panelEnergy.toFixed(3) + ' kWh';
+  if (panelSub) panelSub.textContent = `${state.panelAreaM2.toFixed(2)} m² · ${(state.panelEfficiency * 100).toFixed(1)}% eficiencia`;
+
+  const lastLabel = state.davisLastRead
+    ? state.davisLastRead.toLocaleTimeString('es-CO', { hour12: false })
+    : '--';
+  if (lastPill) lastPill.textContent = lastLabel;
+  if (davisState) davisState.textContent = state.davisConnected ? 'Conectada' : 'Pendiente';
+  if (davisLast) {
+    davisLast.textContent = state.demoWeatherActive
+      ? 'Datos de demostración'
+      : (state.davisLastRead ? `Última lectura: ${lastLabel}` : 'Sin lectura registrada');
+  }
+
+  const data = state.davisWeather || {};
+  if (weatherSummary) {
+    weatherSummary.textContent = `${fmtValue(data.temp_out_c, 1)} °C · ${fmtValue(data.humidity_out, 0)} %`;
+  }
+  if (windSummary) windSummary.textContent = `Viento ${fmtValue(data.wind_speed_ms, 2)} m/s`;
 }
 
 function connectDavis() {
@@ -893,10 +997,162 @@ function toggleDocView() {
   }
 }
 
+/* ===== GROUP CHARTS ===== */
+const groupCharts = {
+  solar: null,
+  temp: null,
+  humidity: null,
+  wind: null,
+  rain: null,
+};
+
+function initGroupCharts() {
+  groupCharts.solar = document.getElementById('groupChartSolar')?.getContext('2d') || null;
+  groupCharts.temp = document.getElementById('groupChartTemp')?.getContext('2d') || null;
+  groupCharts.humidity = document.getElementById('groupChartHumidity')?.getContext('2d') || null;
+  groupCharts.wind = document.getElementById('groupChartWind')?.getContext('2d') || null;
+  groupCharts.rain = document.getElementById('groupChartRain')?.getContext('2d') || null;
+  drawGroupCharts();
+}
+
+function mockWeatherFromIrradiance(irradiance) {
+  const hour = new Date().getHours() + new Date().getMinutes() / 60;
+  const daylight = Math.max(0, Math.sin(Math.PI * (hour - 6) / 12));
+  const breeze = 1.2 + Math.random() * 2.4;
+  return {
+    solar_radiation_wm2: irradiance,
+    uv_index: Math.min(12, daylight * 8 + Math.random()),
+    temp_out_c: 22 + daylight * 8 + (Math.random() - 0.5) * 1.4,
+    temp_in_c: 24 + (Math.random() - 0.5),
+    humidity_out: 76 - daylight * 26 + Math.random() * 8,
+    humidity_in: 58 + Math.random() * 5,
+    pressure_hpa: 1012 + Math.sin(Date.now() / 1800000) * 2,
+    wind_speed_ms: breeze,
+    wind_speed_avg_ms: breeze * 0.82,
+    wind_dir_deg: (Date.now() / 20000) % 360,
+    rain_rate_mm: 0,
+    rain_storm_mm: 0,
+    rain_day_mm: 0,
+    rain_month_mm: 12.4,
+    rain_year_mm: 284.8,
+  };
+}
+
+function pushGroupHistory(data) {
+  const row = {
+    t: new Date(),
+    solar: data.solar_radiation_wm2,
+    uv: data.uv_index,
+    tempOut: data.temp_out_c,
+    tempIn: data.temp_in_c,
+    humidityOut: data.humidity_out,
+    humidityIn: data.humidity_in,
+    pressure: data.pressure_hpa,
+    wind: data.wind_speed_ms,
+    windAvg: data.wind_speed_avg_ms,
+    windDir: data.wind_dir_deg,
+    rainRate: data.rain_rate_mm,
+    rainDay: data.rain_day_mm,
+    rainMonth: data.rain_month_mm,
+    rainYear: data.rain_year_mm,
+  };
+  state.groupHistory.push(row);
+  if (state.groupHistory.length > state.maxGroupHistory) state.groupHistory.shift();
+}
+
+function drawGroupCharts() {
+  if (!state.groupHistory.length) return;
+  drawMultiLineChart('groupChartSolar', groupCharts.solar, [
+    { key: 'solar', label: 'Radiación W/m²', color: '#ffb703', max: 1400 },
+    { key: 'uv', label: 'UV x100', color: '#2563eb', max: 1400, scale: 100 },
+  ], 1400);
+  drawMultiLineChart('groupChartTemp', groupCharts.temp, [
+    { key: 'tempOut', label: 'Exterior °C', color: '#ef4444', max: 50 },
+    { key: 'tempIn', label: 'Interior °C', color: '#16a34a', max: 50 },
+  ], 50);
+  drawMultiLineChart('groupChartHumidity', groupCharts.humidity, [
+    { key: 'humidityOut', label: 'Humedad ext %', color: '#0891b2', max: 110 },
+    { key: 'humidityIn', label: 'Humedad int %', color: '#22c55e', max: 110 },
+    { key: 'pressure', label: 'Presión hPa - 950', color: '#7c3aed', max: 110, offset: 950 },
+  ], 110);
+  drawMultiLineChart('groupChartWind', groupCharts.wind, [
+    { key: 'wind', label: 'Viento m/s', color: '#0f766e', max: 30 },
+    { key: 'windAvg', label: 'Promedio m/s', color: '#84cc16', max: 30 },
+    { key: 'windDir', label: 'Dirección /12', color: '#f97316', max: 30, scale: 1 / 12 },
+  ], 30);
+  drawMultiLineChart('groupChartRain', groupCharts.rain, [
+    { key: 'rainRate', label: 'Tasa mm', color: '#2563eb', max: 100 },
+    { key: 'rainDay', label: 'Día mm', color: '#06b6d4', max: 100 },
+    { key: 'rainMonth', label: 'Mes mm /2', color: '#16a34a', max: 100, scale: 0.5 },
+    { key: 'rainYear', label: 'Año mm /20', color: '#f59e0b', max: 100, scale: 0.05 },
+  ], 100);
+}
+
+function drawMultiLineChart(canvasId, ctx, series, maxY) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !ctx) return;
+  const width = canvas.parentElement.clientWidth || 520;
+  const height = parseInt(canvas.getAttribute('height'), 10) || 220;
+  canvas.width = width;
+  const pad = { top: 24, right: 18, bottom: 28, left: 48 };
+  const chartW = width - pad.left - pad.right;
+  const chartH = height - pad.top - pad.bottom;
+  const rows = state.groupHistory.slice(-80);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = '#d9e2d0';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (i / 4) * chartH;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(width - pad.right, y);
+    ctx.stroke();
+    ctx.fillStyle = '#5d6757';
+    ctx.font = '10px Segoe UI';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxY - (i / 4) * maxY), pad.left - 6, y + 3);
+  }
+
+  if (rows.length < 2) {
+    ctx.fillStyle = '#697463';
+    ctx.font = '12px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('Esperando lecturas', width / 2, height / 2);
+    return;
+  }
+
+  series.forEach((item) => {
+    ctx.beginPath();
+    rows.forEach((row, i) => {
+      const raw = row[item.key];
+      const shifted = Number.isFinite(raw) ? raw - (item.offset || 0) : 0;
+      const value = Math.max(0, shifted * (item.scale || 1));
+      const x = pad.left + (i / (rows.length - 1)) * chartW;
+      const y = pad.top + (1 - Math.min(value, item.max || maxY) / (item.max || maxY)) * chartH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  let legendX = pad.left;
+  series.forEach((item) => {
+    ctx.fillStyle = item.color;
+    ctx.fillRect(legendX, 6, 14, 4);
+    ctx.fillStyle = '#42503b';
+    ctx.font = '10px Segoe UI';
+    ctx.textAlign = 'left';
+    ctx.fillText(item.label, legendX + 18, 10);
+    legendX += Math.min(160, item.label.length * 6 + 36);
+  });
+}
+
 /* ===== RESIZE ===== */
 window.addEventListener('resize', () => {
   drawChart();
-  draw3D();
+  drawGroupCharts();
 });
 
 /* ============================================================
@@ -1107,7 +1363,7 @@ function updateKPIs() {
 /* ----- Vista histórica ----- */
 function setAnaView(v, btn) {
   anaView = v;
-  document.querySelectorAll('#tab-analisis .chip').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tab-datos .chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   drawHistChart();
 }
@@ -1501,7 +1757,7 @@ function exportCSV() {
 
 /* Redraw analysis charts on resize */
 window.addEventListener('resize', () => {
-  if (document.getElementById('tab-analisis').classList.contains('active') && anaFiltered.length) {
+  if (document.getElementById('tab-datos').classList.contains('active') && anaFiltered.length) {
     drawHistChart();
     drawDistChart();
     drawHeatmap();
