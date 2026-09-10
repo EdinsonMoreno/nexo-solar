@@ -1,6 +1,6 @@
 # LICENCIA DE USO RESTRINGIDO - Nexo Solar
 
-Este software y su código fuente han sido desarrollados como parte de un proyecto de grado. Todos los derechos están reservados por su autor.
+Este software y su código fuente han sido desarrollados como parte de un proyecto de investigación. Todos los derechos están reservados por su autor.
 
 ## Condiciones de uso
 
