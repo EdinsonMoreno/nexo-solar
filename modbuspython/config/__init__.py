@@ -1,4 +1,4 @@
-"""Configuration management package for SolarSense SCADA.
+"""Configuration management package for Nexo Solar.
 
 This package handles externalized configuration, validation, and schema management.
 """

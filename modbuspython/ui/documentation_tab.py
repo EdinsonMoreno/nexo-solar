@@ -22,10 +22,10 @@ class DocumentationTab(QWidget):
                     pixmap.scaled(220, 70, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 )
             else:
-                logo.setText("SolarSense")
+                logo.setText("Nexo Solar")
                 logo.setFont(QFont("Arial", 28, QFont.Weight.Bold))
         else:
-            logo.setText("SolarSense")
+            logo.setText("Nexo Solar")
             logo.setFont(QFont("Arial", 28, QFont.Weight.Bold))
         logo.setStyleSheet("background: transparent;")
         logo_row.addWidget(logo)

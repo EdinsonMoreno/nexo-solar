@@ -67,7 +67,7 @@ class MonitorTab(QWidget):
 
             else:
 
-                logo.setText("SolarSense")
+                logo.setText("Nexo Solar")
 
                 logo.setFont(QFont("Arial", 28, QFont.Weight.Bold))
 
@@ -75,7 +75,7 @@ class MonitorTab(QWidget):
 
         else:
 
-            logo.setText("SolarSense")
+            logo.setText("Nexo Solar")
 
             logo.setFont(QFont("Arial", 28, QFont.Weight.Bold))
 

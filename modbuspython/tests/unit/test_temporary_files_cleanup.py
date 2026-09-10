@@ -235,7 +235,7 @@ class TestRequirementValidation:
 
     def test_requirement_10_8_no_temp_files_after_execution(self):
         """
-        Requirement 10.8: THE Sistema_SolarSense SHALL NOT leave
+        Requirement 10.8: THE Sistema_NexoSolar SHALL NOT leave
         temporary files after execution.
         """
         # Verify .gitignore excludes temporary files

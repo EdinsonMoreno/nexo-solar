@@ -13,7 +13,7 @@
 Tomamos la seguridad muy en serio. Si descubres una vulnerabilidad de seguridad, por favor:
 
 1. **NO** crees un issue público en GitHub
-2. Envía un email a: security@solarsense.example.com
+2. Envía un email a: security@nexo-solar.example.com
 3. Incluye la siguiente información:
    - Descripción de la vulnerabilidad
    - Pasos para reproducir
@@ -146,7 +146,7 @@ Seguimos las mejores prácticas de divulgación responsable:
 
 ## Contacto
 
-- **Email**: security@solarsense.example.com
+- **Email**: security@nexo-solar.example.com
 - **PGP Key**: [Descargar](https://example.com/pgp-key.asc)
 - **Tiempo de respuesta**: 48 horas
 

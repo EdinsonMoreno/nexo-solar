@@ -1,6 +1,6 @@
-# SolarSense SCADA - Testing & Analysis Tools
+# Nexo Solar - Testing & Analysis Tools
 
-This directory contains testing utilities and code analysis tools for the SolarSense SCADA project.
+This directory contains testing utilities and code analysis tools for the Nexo Solar project.
 
 ## Quick Start
 
@@ -187,10 +187,10 @@ Planned improvements:
 
 ## Related Documentation
 
-- **Requirements:** `.kiro/specs/solarsense-production-refactoring/requirements.md`
-- **Design:** `.kiro/specs/solarsense-production-refactoring/design.md`
-- **Tasks:** `.kiro/specs/solarsense-production-refactoring/tasks.md`
-- **Verification:** `.kiro/specs/solarsense-production-refactoring/circular_imports_verification.md`
+- **Requirements:** `.kiro/specs/nexo-solar-production-refactoring/requirements.md`
+- **Design:** `.kiro/specs/nexo-solar-production-refactoring/design.md`
+- **Tasks:** `.kiro/specs/nexo-solar-production-refactoring/tasks.md`
+- **Verification:** `.kiro/specs/nexo-solar-production-refactoring/circular_imports_verification.md`
 
 ## Contact
 

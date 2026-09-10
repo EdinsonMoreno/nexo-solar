@@ -1,4 +1,4 @@
-"""Credential encryption utilities for SolarSense SCADA.
+"""Credential encryption utilities for Nexo Solar.
 
 Provides Fernet symmetric encryption for sensitive configuration values
 such as passwords, API keys, and tokens.
@@ -30,7 +30,7 @@ class CredentialEncryptor:
 
         Args:
             key: Fernet encryption key (32 url-safe base64-encoded bytes).
-                 If None, tries to load from SOLARSENSE_ENCRYPTION_KEY env var.
+                 If None, tries to load from NEXO_SOLAR_ENCRYPTION_KEY env var.
         """
         if key is None:
             key = self._load_key_from_env()
@@ -63,7 +63,7 @@ class CredentialEncryptor:
         Returns:
             Encryption key bytes or None if not set
         """
-        key_str = os.environ.get("SOLARSENSE_ENCRYPTION_KEY")
+        key_str = os.environ.get("NEXO_SOLAR_ENCRYPTION_KEY")
         if key_str:
             return key_str.encode("utf-8")
         return None
@@ -81,7 +81,7 @@ class CredentialEncryptor:
             ValueError: If encryption is not configured
         """
         if self._fernet is None:
-            raise ValueError("Encryption not configured. Set SOLARSENSE_ENCRYPTION_KEY environment variable.")
+            raise ValueError("Encryption not configured. Set NEXO_SOLAR_ENCRYPTION_KEY environment variable.")
 
         encrypted = self._fernet.encrypt(plaintext.encode("utf-8"))
         return f"ENC:{base64.urlsafe_b64encode(encrypted).decode('utf-8')}"
@@ -99,7 +99,7 @@ class CredentialEncryptor:
             ValueError: If encryption is not configured or decryption fails
         """
         if self._fernet is None:
-            raise ValueError("Encryption not configured. Set SOLARSENSE_ENCRYPTION_KEY environment variable.")
+            raise ValueError("Encryption not configured. Set NEXO_SOLAR_ENCRYPTION_KEY environment variable.")
 
         try:
             if encrypted_value.startswith("ENC:"):

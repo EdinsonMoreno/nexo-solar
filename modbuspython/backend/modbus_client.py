@@ -1,4 +1,4 @@
-# Módulo de gestión de conexión y comunicación Modbus TCP para SolarSense.
+# Módulo de gestión de conexión y comunicación Modbus TCP para Nexo Solar.
 
 
 # Incluye integración con PyQt6 para señales y temporización, y soporte para almacenamiento en SQLite.

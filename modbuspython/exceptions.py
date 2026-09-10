@@ -1,11 +1,11 @@
 """
-Custom exception hierarchy for SolarSense SCADA application.
+Custom exception hierarchy for Nexo Solar application.
 
 This module defines a comprehensive exception hierarchy that enables better error
 handling, logging, and recovery strategies throughout the application.
 
 Exception Hierarchy:
-    SolarSenseException (base)
+    NexoSolarException (base)
     ├── ConfigurationError
     ├── ValidationError
     ├── ModbusConnectionError
@@ -20,9 +20,9 @@ Requirements: 4.6, 4.7
 """
 
 
-class SolarSenseException(Exception):
+class NexoSolarException(Exception):
     """
-    Base exception class for all SolarSense SCADA exceptions.
+    Base exception class for all Nexo Solar exceptions.
 
     All custom exceptions in the application should inherit from this class
     to enable centralized exception handling and logging.
@@ -52,7 +52,7 @@ class SolarSenseException(Exception):
         return self.message
 
 
-class ConfigurationError(SolarSenseException):
+class ConfigurationError(NexoSolarException):
     """
     Exception raised for configuration-related errors.
 
@@ -69,7 +69,7 @@ class ConfigurationError(SolarSenseException):
     pass
 
 
-class ValidationError(SolarSenseException):
+class ValidationError(NexoSolarException):
     """
     Exception raised for input validation errors.
 
@@ -86,7 +86,7 @@ class ValidationError(SolarSenseException):
     pass
 
 
-class ModbusConnectionError(SolarSenseException):
+class ModbusConnectionError(NexoSolarException):
     """
     Exception raised for Modbus connection failures.
 
@@ -103,7 +103,7 @@ class ModbusConnectionError(SolarSenseException):
     pass
 
 
-class ModbusOperationError(SolarSenseException):
+class ModbusOperationError(NexoSolarException):
     """
     Exception raised for Modbus operation failures.
 
@@ -120,25 +120,25 @@ class ModbusOperationError(SolarSenseException):
     pass
 
 
-class DavisConnectionError(SolarSenseException):
+class DavisConnectionError(NexoSolarException):
     """Raised when the Davis weather station cannot be reached or configured."""
 
     pass
 
 
-class DavisProtocolError(SolarSenseException):
+class DavisProtocolError(NexoSolarException):
     """Raised when a Davis packet does not match the expected protocol format."""
 
     pass
 
 
-class DavisTransportError(SolarSenseException):
+class DavisTransportError(NexoSolarException):
     """Raised when a Davis serial or TCP transport fails while reading or writing."""
 
     pass
 
 
-class DatabaseError(SolarSenseException):
+class DatabaseError(NexoSolarException):
     """
     Exception raised for database operation failures.
 
@@ -156,7 +156,7 @@ class DatabaseError(SolarSenseException):
     pass
 
 
-class MigrationError(SolarSenseException):
+class MigrationError(NexoSolarException):
     """
     Exception raised for database migration failures.
 

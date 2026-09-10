@@ -1,7 +1,7 @@
 """
 Unit tests for custom exception hierarchy.
 
-Tests the SolarSense custom exception classes to ensure proper inheritance,
+Tests the Nexo Solar custom exception classes to ensure proper inheritance,
 initialization, and string representation.
 
 Requirements: 4.6, 4.7
@@ -9,7 +9,7 @@ Requirements: 4.6, 4.7
 
 import pytest
 from modbuspython.exceptions import (
-    SolarSenseException,
+    NexoSolarException,
     ConfigurationError,
     ValidationError,
     ModbusConnectionError,
@@ -19,12 +19,12 @@ from modbuspython.exceptions import (
 )
 
 
-class TestSolarSenseException:
-    """Tests for the base SolarSenseException class."""
+class TestNexoSolarException:
+    """Tests for the base NexoSolarException class."""
 
     def test_basic_initialization(self):
         """Test basic exception initialization with message only."""
-        exc = SolarSenseException("Test error")
+        exc = NexoSolarException("Test error")
         assert exc.message == "Test error"
         assert exc.details == {}
         assert str(exc) == "Test error"
@@ -32,21 +32,21 @@ class TestSolarSenseException:
     def test_initialization_with_details(self):
         """Test exception initialization with message and details."""
         details = {"key": "value", "code": 123}
-        exc = SolarSenseException("Test error", details)
+        exc = NexoSolarException("Test error", details)
         assert exc.message == "Test error"
         assert exc.details == details
         assert "key=value" in str(exc)
         assert "code=123" in str(exc)
 
     def test_is_exception(self):
-        """Test that SolarSenseException inherits from Exception."""
-        exc = SolarSenseException("Test")
+        """Test that NexoSolarException inherits from Exception."""
+        exc = NexoSolarException("Test")
         assert isinstance(exc, Exception)
 
     def test_can_be_raised(self):
         """Test that exception can be raised and caught."""
-        with pytest.raises(SolarSenseException) as exc_info:
-            raise SolarSenseException("Test error")
+        with pytest.raises(NexoSolarException) as exc_info:
+            raise NexoSolarException("Test error")
         assert exc_info.value.message == "Test error"
 
 
@@ -54,9 +54,9 @@ class TestConfigurationError:
     """Tests for ConfigurationError exception."""
 
     def test_inheritance(self):
-        """Test that ConfigurationError inherits from SolarSenseException."""
+        """Test that ConfigurationError inherits from NexoSolarException."""
         exc = ConfigurationError("Config error")
-        assert isinstance(exc, SolarSenseException)
+        assert isinstance(exc, NexoSolarException)
         assert isinstance(exc, Exception)
 
     def test_with_details(self):
@@ -66,8 +66,8 @@ class TestConfigurationError:
         assert "file=config.yaml" in str(exc)
 
     def test_can_be_caught_as_base(self):
-        """Test that ConfigurationError can be caught as SolarSenseException."""
-        with pytest.raises(SolarSenseException):
+        """Test that ConfigurationError can be caught as NexoSolarException."""
+        with pytest.raises(NexoSolarException):
             raise ConfigurationError("Test")
 
 
@@ -75,9 +75,9 @@ class TestValidationError:
     """Tests for ValidationError exception."""
 
     def test_inheritance(self):
-        """Test that ValidationError inherits from SolarSenseException."""
+        """Test that ValidationError inherits from NexoSolarException."""
         exc = ValidationError("Validation failed")
-        assert isinstance(exc, SolarSenseException)
+        assert isinstance(exc, NexoSolarException)
         assert isinstance(exc, Exception)
 
     def test_with_validation_details(self):
@@ -92,9 +92,9 @@ class TestModbusConnectionError:
     """Tests for ModbusConnectionError exception."""
 
     def test_inheritance(self):
-        """Test that ModbusConnectionError inherits from SolarSenseException."""
+        """Test that ModbusConnectionError inherits from NexoSolarException."""
         exc = ModbusConnectionError("Connection failed")
-        assert isinstance(exc, SolarSenseException)
+        assert isinstance(exc, NexoSolarException)
         assert isinstance(exc, Exception)
 
     def test_with_connection_details(self):
@@ -109,9 +109,9 @@ class TestModbusOperationError:
     """Tests for ModbusOperationError exception."""
 
     def test_inheritance(self):
-        """Test that ModbusOperationError inherits from SolarSenseException."""
+        """Test that ModbusOperationError inherits from NexoSolarException."""
         exc = ModbusOperationError("Read failed")
-        assert isinstance(exc, SolarSenseException)
+        assert isinstance(exc, NexoSolarException)
         assert isinstance(exc, Exception)
 
     def test_with_operation_details(self):
@@ -126,9 +126,9 @@ class TestDatabaseError:
     """Tests for DatabaseError exception."""
 
     def test_inheritance(self):
-        """Test that DatabaseError inherits from SolarSenseException."""
+        """Test that DatabaseError inherits from NexoSolarException."""
         exc = DatabaseError("Query failed")
-        assert isinstance(exc, SolarSenseException)
+        assert isinstance(exc, NexoSolarException)
         assert isinstance(exc, Exception)
 
     def test_with_database_details(self):
@@ -142,9 +142,9 @@ class TestMigrationError:
     """Tests for MigrationError exception."""
 
     def test_inheritance(self):
-        """Test that MigrationError inherits from SolarSenseException."""
+        """Test that MigrationError inherits from NexoSolarException."""
         exc = MigrationError("Migration failed")
-        assert isinstance(exc, SolarSenseException)
+        assert isinstance(exc, NexoSolarException)
         assert isinstance(exc, Exception)
 
     def test_with_migration_details(self):
@@ -159,7 +159,7 @@ class TestExceptionHierarchy:
     """Tests for the overall exception hierarchy."""
 
     def test_all_exceptions_inherit_from_base(self):
-        """Test that all custom exceptions inherit from SolarSenseException."""
+        """Test that all custom exceptions inherit from NexoSolarException."""
         exceptions = [
             ConfigurationError("test"),
             ValidationError("test"),
@@ -170,7 +170,7 @@ class TestExceptionHierarchy:
         ]
 
         for exc in exceptions:
-            assert isinstance(exc, SolarSenseException)
+            assert isinstance(exc, NexoSolarException)
             assert isinstance(exc, Exception)
 
     def test_can_catch_all_with_base(self):
@@ -185,7 +185,7 @@ class TestExceptionHierarchy:
         ]
 
         for exc_class in exceptions:
-            with pytest.raises(SolarSenseException):
+            with pytest.raises(NexoSolarException):
                 raise exc_class("Test error")
 
     def test_specific_exception_types_are_distinct(self):

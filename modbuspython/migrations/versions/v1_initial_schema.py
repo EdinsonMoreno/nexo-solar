@@ -1,6 +1,6 @@
 """Initial schema migration.
 
-Creates the base tables required by SolarSense SCADA:
+Creates the base tables required by Nexo Solar:
 - irradiance measurements table (generic structure)
 - schema_version table (for migration tracking)
 
@@ -9,7 +9,7 @@ This is the baseline migration (v1) that establishes the initial database struct
 Requirements validated: 13.2, 13.6
 """
 
-DESCRIPTION = "Initial schema: creates base tables for SolarSense SCADA"
+DESCRIPTION = "Initial schema: creates base tables for Nexo Solar"
 
 
 def upgrade(conn):

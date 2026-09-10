@@ -7,7 +7,7 @@ Implementación bottom-up del módulo `DavisWeatherLinkReader` en Python/PyQt6, 
 ## Tareas
 
 - [ ] 1. Añadir excepciones Davis a `modbuspython/exceptions.py`
-  - Añadir las clases `DavisConnectionError`, `DavisProtocolError` y `DavisTransportError` heredando de `SolarSenseException`, con sus docstrings y ejemplos
+  - Añadir las clases `DavisConnectionError`, `DavisProtocolError` y `DavisTransportError` heredando de `NexoSolarException`, con sus docstrings y ejemplos
   - _Requisitos: 12.1, 12.2, 12.3, 10.3_
 
 - [ ] 2. Crear el modelo de datos `WeatherData`

@@ -1,7 +1,7 @@
-"""SolarSense SCADA main application.
+"""Nexo Solar main application.
 
 This module provides the main application window and entry point for the
-SolarSense SCADA system. It initializes all components, manages tabs,
+Nexo Solar system. It initializes all components, manages tabs,
 and handles application lifecycle.
 
 Requirements validated: 1.4, 6.2, 10.1, 10.2, 10.3, 10.4, 10.9
@@ -16,7 +16,7 @@ from typing import Optional
 from .ui.web_dashboard import WebDashboard
 from .data_access.modbus_client import ModbusClient as ModbusManager
 from .data_access.davis_weatherlink import DavisWeatherLinkReader
-from .ui.splash_screen import SolarSenseSplashScreen
+from .ui.splash_screen import NexoSolarSplashScreen
 from .data_access.logging_service import LoggingService
 from .config.config_manager import ConfigurationManager
 from .config.config_defaults import DEFAULT_CONFIG
@@ -24,7 +24,7 @@ from pathlib import Path
 
 
 class MainWindow(QMainWindow):
-    """Main application window for SolarSense SCADA.
+    """Main application window for Nexo Solar.
 
     Provides the main UI with tabbed interface for monitoring, location,
     diagnostics, and documentation. Manages Modbus client lifecycle and
@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
 
         self.logger.info("Starting MainWindow initialization")
         super().__init__()
-        self.setWindowTitle("SolarSense - SCADA")
+        self.setWindowTitle("Nexo Solar")
         self.setMinimumSize(1400, 800)
         self.setStyleSheet("QMainWindow { background: #0d1117; }")
 
@@ -206,7 +206,7 @@ class MainWindow(QMainWindow):
 
 
 def main() -> int:
-    """Run the SolarSense SCADA application.
+    """Run the Nexo Solar application.
 
     Initializes configuration, logging, and Qt application. Shows splash screen
     during startup and launches the main window.
@@ -243,17 +243,17 @@ def main() -> int:
     logger = LoggingService()
     logging_config = config.logging_config
     logger.setup(
-        log_file=Path(logging_config.get("file_path", "logs/solarsense.log")),
+        log_file=Path(logging_config.get("file_path", "logs/nexo_solar.log")),
         level=logging_config.get("level", "INFO"),
         max_bytes=logging_config.get("max_bytes", 10485760),
         backup_count=logging_config.get("backup_count", 5),
     )
-    logger.info("SolarSense SCADA application starting")
+    logger.info("Nexo Solar application starting")
     logger.info(f"Configuration loaded from: {config_path}")
 
     # Verify schema version and apply pending migrations on startup (Requirement 13.7)
     db_config = config.database_config
-    db_path = db_config.get("path", "solarsense.db")
+    db_path = db_config.get("path", "nexo_solar.db")
     try:
         from .data_access.database_manager import SchemaVersionRepository
         from .migrations.migration_manager import MigrationManager
@@ -290,7 +290,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     # Pantalla de carga futurista
-    splash = SolarSenseSplashScreen()
+    splash = NexoSolarSplashScreen()
     splash.show()
     app.processEvents()
     # Paleta personalizada estilo LabVIEW
@@ -308,7 +308,7 @@ def main() -> int:
     window = MainWindow(config=config)
     window.show()
     splash.finish(window)
-    logger.info("SolarSense SCADA application started successfully")
+    logger.info("Nexo Solar application started successfully")
     return int(app.exec())
 
 

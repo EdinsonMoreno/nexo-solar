@@ -1,4 +1,4 @@
-"""Data access layer package for SolarSense SCADA.
+"""Data access layer package for Nexo Solar.
 
 This package handles all data persistence operations including Modbus communication,
 database operations, logging, and file exports.

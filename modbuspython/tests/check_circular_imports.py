@@ -1,5 +1,5 @@
 """
-Circular Import Detection Script for SolarSense SCADA
+Circular Import Detection Script for Nexo Solar
 
 This script analyzes the import structure of the modbuspython package
 to detect circular dependencies between modules.
@@ -204,7 +204,7 @@ def generate_dependency_report(root_dir: Path) -> str:
 
     report = []
     report.append("=" * 80)
-    report.append("SOLARSENSE SCADA - CIRCULAR IMPORT ANALYSIS REPORT")
+    report.append("NEXO SOLAR - CIRCULAR IMPORT ANALYSIS REPORT")
     report.append("=" * 80)
     report.append("")
 

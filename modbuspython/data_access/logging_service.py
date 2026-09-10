@@ -1,5 +1,5 @@
 """
-Centralized logging service for SolarSense SCADA application.
+Centralized logging service for Nexo Solar application.
 
 This module provides a singleton logging service with structured logging,
 file rotation, and multiple output handlers (file and console).
@@ -132,14 +132,14 @@ class LoggingService:
         Example:
             >>> logger = LoggingService()
             >>> logger.setup(
-            ...     log_file=Path("logs/solarsense.log"),
+            ...     log_file=Path("logs/nexo_solar.log"),
             ...     level="INFO",
             ...     max_bytes=10485760,
             ...     backup_count=5
             ... )
         """
         # Create logger instance
-        self._logger = logging.getLogger("solarsense")
+        self._logger = logging.getLogger("nexo-solar")
         self._logger.setLevel(getattr(logging, level.upper()))
 
         # Remove existing handlers to avoid duplicates

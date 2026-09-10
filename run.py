@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Entry point script for SolarSense SCADA application.
+"""Entry point script for Nexo Solar application.
 
 This script should be run from the project root directory.
 It properly sets up the Python path and launches the application.

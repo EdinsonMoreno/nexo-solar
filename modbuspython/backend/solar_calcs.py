@@ -1,4 +1,4 @@
-"""Solar position calculation utilities for SolarSense SCADA.
+"""Solar position calculation utilities for Nexo Solar.
 
 
 

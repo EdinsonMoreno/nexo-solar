@@ -1,6 +1,6 @@
 # Configuration Module
 
-This module provides centralized configuration management for the SolarSense SCADA application.
+This module provides centralized configuration management for the Nexo Solar application.
 
 ## Features
 
@@ -96,13 +96,13 @@ modbus:
     irradiance: 4
 
 database:
-  path: "data/solarsense.db"
+  path: "data/nexo_solar.db"
   table_name: "measurements"
   connection_pool_size: 5
 
 logging:
   level: "INFO"
-  file_path: "logs/solarsense.log"
+  file_path: "logs/nexo_solar.log"
   max_bytes: 10485760
   backup_count: 5
 
@@ -123,7 +123,7 @@ angles:
     "timeout": 5.0
   },
   "database": {
-    "path": "data/solarsense.db",
+    "path": "data/nexo_solar.db",
     "table_name": "measurements"
   }
 }

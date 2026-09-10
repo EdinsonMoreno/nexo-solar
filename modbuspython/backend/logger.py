@@ -1,4 +1,4 @@
-"""Simple in-memory logger for SolarSense SCADA.
+"""Simple in-memory logger for Nexo Solar.
 
 This module provides a basic logger that stores log messages in memory
 for display in the UI. For persistent logging, use LoggingService instead.

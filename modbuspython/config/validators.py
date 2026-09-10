@@ -1,4 +1,4 @@
-"""Configuration validators for SolarSense SCADA.
+"""Configuration validators for Nexo Solar.
 
 This module provides validation functions for configuration values
 to ensure they meet the required constraints before being used.

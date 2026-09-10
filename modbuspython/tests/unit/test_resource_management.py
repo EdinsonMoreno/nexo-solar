@@ -84,7 +84,7 @@ class TestDatabaseConnectionClosure:
 
 
 
-    WHEN application closes, THE Sistema_SolarSense SHALL close all database connections
+    WHEN application closes, THE Sistema_NexoSolar SHALL close all database connections
     """
 
     @pytest.fixture
@@ -234,7 +234,7 @@ class TestModbusConnectionClosure:
 
 
 
-    WHEN application closes, THE Sistema_SolarSense SHALL close all Modbus connections
+    WHEN application closes, THE Sistema_NexoSolar SHALL close all Modbus connections
     """
 
     def test_modbus_client_closes_connection_on_stop(self):
@@ -363,7 +363,7 @@ class TestBackgroundThreadStopping:
 
 
 
-    WHEN application closes, THE Sistema_SolarSense SHALL stop all background threads
+    WHEN application closes, THE Sistema_NexoSolar SHALL stop all background threads
     """
 
     def test_modbus_client_thread_stops_on_stop_call(self):
@@ -545,7 +545,7 @@ class TestLogFileClosing:
 
 
 
-    WHEN application closes, THE Sistema_SolarSense SHALL flush and close all log files
+    WHEN application closes, THE Sistema_NexoSolar SHALL flush and close all log files
     """
 
     @pytest.fixture
@@ -729,7 +729,7 @@ class TestTemporaryFileCleanup:
 
 
 
-    THE Sistema_SolarSense SHALL NOT leave temporary files after execution
+    THE Sistema_NexoSolar SHALL NOT leave temporary files after execution
     """
 
     def test_no_temp_files_in_working_directory_after_cleanup(self):
@@ -826,7 +826,7 @@ class TestGracefulShutdownTimeout:
 
 
 
-    THE Sistema_SolarSense SHALL implement graceful shutdown with timeout (10 seconds maximum)
+    THE Sistema_NexoSolar SHALL implement graceful shutdown with timeout (10 seconds maximum)
     """
 
     def test_modbus_client_shutdown_respects_timeout(self):

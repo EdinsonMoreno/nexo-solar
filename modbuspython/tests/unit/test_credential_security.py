@@ -1,4 +1,4 @@
-"""Security tests for SolarSense SCADA credential management.
+"""Security tests for Nexo Solar credential management.
 
 Tests for:
 - Environment variable loading

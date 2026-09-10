@@ -27,14 +27,14 @@ davis_weatherlink:
 
 # Database Configuration
 database:
-  path: "data/solarsense.db"  # Path to SQLite database file
+  path: "data/nexo_solar.db"  # Path to SQLite database file
   table_name: "measurements"   # Name of the measurements table
   connection_pool_size: 5      # Maximum number of database connections
 
 # Logging Configuration
 logging:
   level: "INFO"                    # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  file_path: "logs/solarsense.log" # Path to log file
+  file_path: "logs/nexo_solar.log" # Path to log file
   max_bytes: 10485760              # Maximum log file size (10 MB)
   backup_count: 5                  # Number of backup log files to keep
 

@@ -1,4 +1,4 @@
-"""Modbus TCP client for SolarSense SCADA.
+"""Modbus TCP client for Nexo Solar.
 
 This module provides a threaded Modbus TCP client that executes I/O operations
 in a separate thread to keep the UI responsive. It handles connection management,

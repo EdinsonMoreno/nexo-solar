@@ -2,7 +2,7 @@
 
 ## Visión General
 
-El módulo `DavisWeatherLinkReader` integra la lectura de una estación meteorológica **Davis Vantage Pro2** en SolarSense SCADA. Sigue exactamente los mismos patrones arquitectónicos que `ModbusClient`: hilo `QThread` dedicado para I/O no bloqueante, señales Qt para comunicación con la UI, singletons `LoggingService` y `ConfigurationManager`, y `RetryStrategy` para reintentos con backoff exponencial.
+El módulo `DavisWeatherLinkReader` integra la lectura de una estación meteorológica **Davis Vantage Pro2** en Nexo Solar. Sigue exactamente los mismos patrones arquitectónicos que `ModbusClient`: hilo `QThread` dedicado para I/O no bloqueante, señales Qt para comunicación con la UI, singletons `LoggingService` y `ConfigurationManager`, y `RetryStrategy` para reintentos con backoff exponencial.
 
 El módulo se ubica en `modbuspython/data_access/` para mantener coherencia con la capa de acceso a datos existente, y expone la misma interfaz de señales Qt que `ModbusClient` para facilitar su integración en la UI.
 
@@ -10,7 +10,7 @@ El módulo se ubica en `modbuspython/data_access/` para mantener coherencia con 
 
 ## Arquitectura
 
-### Posición en la arquitectura SolarSense
+### Posición en la arquitectura Nexo Solar
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -504,10 +504,10 @@ davis_weatherlink:
 
 ## Excepciones Nuevas en `exceptions.py`
 
-Se añaden tres excepciones a la jerarquía existente, todas heredando de `SolarSenseException`:
+Se añaden tres excepciones a la jerarquía existente, todas heredando de `NexoSolarException`:
 
 ```python
-class DavisConnectionError(SolarSenseException):
+class DavisConnectionError(NexoSolarException):
     """
     Fallo al establecer o mantener la conexión con la consola Davis.
 
@@ -519,7 +519,7 @@ class DavisConnectionError(SolarSenseException):
     pass
 
 
-class DavisProtocolError(SolarSenseException):
+class DavisProtocolError(NexoSolarException):
     """
     Violación del protocolo Davis WeatherLink.
 
@@ -532,7 +532,7 @@ class DavisProtocolError(SolarSenseException):
     pass
 
 
-class DavisTransportError(SolarSenseException):
+class DavisTransportError(NexoSolarException):
     """
     Error en la capa de transporte (serie o IP).
 
@@ -547,7 +547,7 @@ class DavisTransportError(SolarSenseException):
 La jerarquía queda:
 
 ```
-SolarSenseException
+NexoSolarException
 ├── ConfigurationError
 ├── ValidationError
 ├── ModbusConnectionError

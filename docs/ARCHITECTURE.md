@@ -206,7 +206,7 @@ Application startup
 
 ### Exception Hierarchy
 ```
-SolarSenseException
+NexoSolarException
 ├── ConfigurationError
 ├── ValidationError
 ├── ModbusConnectionError

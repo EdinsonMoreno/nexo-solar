@@ -154,7 +154,7 @@ class TestConfigurationManager:
         # Should have loaded defaults
         assert manager.get("modbus.host") == "192.168.1.100"
         assert manager.get("modbus.port") == 502
-        assert manager.get("database.table_name") == "measurements"
+        assert manager.get("database.table_name") == "mediciones"
 
     # Test: Fallback to defaults when configuration is invalid (malformed JSON)
     def test_load_invalid_json_uses_defaults(self, tmp_path, schema_path):
@@ -167,7 +167,7 @@ class TestConfigurationManager:
 
         # Should have loaded defaults
         assert manager.get("modbus.host") == "192.168.1.100"
-        assert manager.get("database.path") == "data/solarsense.db"
+        assert manager.get("database.path") == "data/nexo_solar.db"
 
     # Test: Schema validation - missing required fields
     def test_validation_missing_required_fields(self, tmp_path, schema_path):
@@ -387,7 +387,7 @@ class TestConfigurationManager:
 
         assert "modbus" in config
         assert "database" in config
-        assert config["database"]["table_name"] == "measurements"
+        assert config["database"]["table_name"] == "mediciones"
 
     # Test: Reload method
     def test_reload_config(self, tmp_path, schema_path):
@@ -521,7 +521,7 @@ class TestConfigurationManager:
         manager.load_config(config_file, schema_path)
 
         # Should fall back to defaults due to invalid SQL identifier
-        assert manager.get("database.table_name") == "measurements"
+        assert manager.get("database.table_name") == "mediciones"
 
     # Test: Validation of SQL table name with special characters
     def test_validation_sql_identifier_with_special_chars(self, tmp_path, schema_path):
@@ -541,7 +541,7 @@ class TestConfigurationManager:
         manager.load_config(config_file, schema_path)
 
         # Should fall back to defaults due to invalid SQL identifier
-        assert manager.get("database.table_name") == "measurements"
+        assert manager.get("database.table_name") == "mediciones"
 
     # Test: Valid configuration passes all validations
     def test_validation_all_valid_values(self, tmp_path, schema_path):

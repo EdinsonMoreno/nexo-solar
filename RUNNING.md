@@ -1,4 +1,4 @@
-# Cómo Ejecutar SolarSense SCADA
+# Cómo Ejecutar Nexo Solar
 
 ## Método Recomendado (desde la raíz del proyecto)
 

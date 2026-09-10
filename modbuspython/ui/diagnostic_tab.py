@@ -86,13 +86,13 @@ class DiagnosticTab(QWidget):
 
             else:
 
-                logo.setText("SolarSense")
+                logo.setText("Nexo Solar")
 
                 logo.setFont(QFont("Arial", 28, QFont.Weight.Bold))
 
         else:
 
-            logo.setText("SolarSense")
+            logo.setText("Nexo Solar")
 
             logo.setFont(QFont("Arial", 28, QFont.Weight.Bold))
 

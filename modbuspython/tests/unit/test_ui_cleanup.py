@@ -191,7 +191,7 @@ class TestRequirementValidation:
     def test_requirement_10_7_qwebengineview_cleanup(self):
         """
         Requirement 10.7: WHEN QWebEngineView is destroyed,
-        THE Sistema_SolarSense SHALL release associated resources.
+        THE Sistema_NexoSolar SHALL release associated resources.
         """
         from modbuspython.ui.map_widget import MapWidget
         from modbuspython.ui.location_tab_fixed import LocationTab

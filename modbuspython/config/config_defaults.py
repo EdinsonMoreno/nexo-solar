@@ -40,7 +40,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "retry_backoff": 1.0,
     },
     "database": {
-        "path": "data/solarsense.db",
+        "path": "data/nexo_solar.db",
         "table_name": "mediciones",
         # Fuente de la pestaña Análisis. Se separa de la base de escritura
         # porque el histórico medido en campo vive en su propio archivo.
@@ -50,7 +50,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     },
     "logging": {
         "level": "INFO",
-        "file_path": "logs/solarsense.log",
+        "file_path": "logs/nexo_solar.log",
         "max_bytes": 10485760,
         "backup_count": 5,
     },

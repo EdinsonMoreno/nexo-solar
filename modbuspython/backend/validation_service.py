@@ -1,4 +1,4 @@
-"""Validation service for SolarSense SCADA.
+"""Validation service for Nexo Solar.
 
 This module provides input validation and sanitization for all user inputs
 across the application. It implements an abstract base class pattern with
@@ -248,7 +248,7 @@ class SQLIdentifierValidator(Validator):
 
 
 class ValidationService:
-    """Facade for all validation operations in SolarSense SCADA.
+    """Facade for all validation operations in Nexo Solar.
 
     This service aggregates all validators and provides a unified interface
     for validating different types of inputs. It loads angle limits from

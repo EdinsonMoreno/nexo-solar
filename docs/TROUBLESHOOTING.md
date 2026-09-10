@@ -50,7 +50,7 @@
 5. **Review logs:**
    ```bash
    # Check recent errors
-   cat logs/solarsense.log | grep -i "error\|modbus\|connection"
+   cat logs/nexo_solar.log | grep -i "error\|modbus\|connection"
    ```
 
 **Common solutions:**
@@ -97,7 +97,7 @@
 
 **Symptoms:**
 - Error: "Permission or access error for database file"
-- No `data/solarsense.db` file exists
+- No `data/nexo_solar.db` file exists
 
 **Steps to diagnose:**
 
@@ -118,7 +118,7 @@
 3. **Check configuration:**
    ```yaml
    database:
-     path: "data/solarsense.db"
+     path: "data/nexo_solar.db"
    ```
 
 ### Database Locked Error
@@ -158,7 +158,7 @@
 
 2. **Verify table exists:**
    ```bash
-   sqlite3 data/solarsense.db ".tables"
+   sqlite3 data/nexo_solar.db ".tables"
    ```
 
 3. **Recreate table:**
@@ -302,7 +302,7 @@
 
 1. **Review validation error:**
    ```bash
-   cat logs/solarsense.log | grep "validation"
+   cat logs/nexo_solar.log | grep "validation"
    ```
 
 2. **Check schema:**
@@ -389,7 +389,7 @@
 
 3. **Audit log files:**
    ```bash
-   grep -i "password\|secret\|token\|key" logs/solarsense.log
+   grep -i "password\|secret\|token\|key" logs/nexo_solar.log
    ```
 
 ### Insecure File Permissions
@@ -447,11 +447,11 @@ Example:
 
 ```bash
 # Default location
-logs/solarsense.log
+logs/nexo_solar.log
 
 # Rotate files (if max_bytes exceeded)
-logs/solarsense.log.1
-logs/solarsense.log.2
+logs/nexo_solar.log.1
+logs/nexo_solar.log.2
 ...
 ```
 
@@ -476,7 +476,7 @@ If you cannot resolve the issue:
    pip list
 
    # Logs
-   tail -100 logs/solarsense.log
+   tail -100 logs/nexo_solar.log
 
    # Configuration
    cat config.yaml (remove sensitive data)

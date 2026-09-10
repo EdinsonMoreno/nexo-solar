@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt
 import os
 
 
-class SolarSenseSplashScreen(QSplashScreen):
+class NexoSolarSplashScreen(QSplashScreen):
     def __init__(self, parent=None):
         # Cargar imagen de fondo (puedes reemplazar por tu logo o imagen futurista)
         splash_img_path = os.path.join(os.path.dirname(__file__), "assets", "splash_futurista.png")
@@ -24,7 +24,7 @@ class SolarSenseSplashScreen(QSplashScreen):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setWindowOpacity(0.97)
         # Texto principal
-        self.label = QLabel("SolarSense SCADA", self)
+        self.label = QLabel("Nexo Solar", self)
         self.label.setStyleSheet("color: #00ffe7; font-size: 32px; font-weight: bold; text-shadow: 0 0 8px #00ffe7;")
         self.label.setFont(QFont("Consolas", 28, QFont.Weight.Bold))
         self.label.move(40, 40)
@@ -40,7 +40,7 @@ class SolarSenseSplashScreen(QSplashScreen):
         )
         self.line.setGeometry(40, 80, 320, 4)
         # Logo pequeño (opcional)
-        logo_path = os.path.join(os.path.dirname(__file__), "assets", "LogoSolarSense.png")
+        logo_path = os.path.join(os.path.dirname(__file__), "assets", "LogoNexoSolar.png")
         if os.path.exists(logo_path):
             logo = QPixmap(logo_path).scaled(
                 80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation

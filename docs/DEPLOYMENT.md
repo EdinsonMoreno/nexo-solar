@@ -111,7 +111,7 @@ python run.py
 
 ### 8. Crear Acceso Directo (Opcional)
 
-Crear un archivo `SolarSense.bat`:
+Crear un archivo `Nexo Solar.bat`:
 ```batch
 @echo off
 cd /d C:\ruta\al\proyecto
@@ -121,7 +121,7 @@ python run.py
 
 Colocar en `shell:startup` para inicio automático:
 ```powershell
-Copy-Item SolarSense.bat "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\"
+Copy-Item Nexo Solar.bat "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\"
 ```
 
 ---
@@ -179,22 +179,22 @@ chmod 600 .env config.yaml
 
 ### 7. Crear Servicio systemd
 
-Crear `/etc/systemd/system/solarsense.service`:
+Crear `/etc/systemd/system/nexo-solar.service`:
 
 ```ini
 [Unit]
-Description=SolarSense SCADA
+Description=Nexo Solar
 After=network.target
 
 [Service]
 Type=simple
-User=solarsense
-Group=solarsense
-WorkingDirectory=/opt/solarsense-scada
-ExecStart=/opt/solarsense-scada/.venv/bin/python run.py
+User=nexo-solar
+Group=nexo-solar
+WorkingDirectory=/opt/nexo-solar
+ExecStart=/opt/nexo-solar/.venv/bin/python run.py
 Restart=on-failure
 RestartSec=5
-Environment=PATH=/opt/solarsense-scada/.venv/bin
+Environment=PATH=/opt/nexo-solar/.venv/bin
 
 [Install]
 WantedBy=multi-user.target
@@ -204,9 +204,9 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable solarsense
-sudo systemctl start solarsense
-sudo systemctl status solarsense
+sudo systemctl enable nexo-solar
+sudo systemctl start nexo-solar
+sudo systemctl status nexo-solar
 ```
 
 ---
@@ -249,9 +249,9 @@ CMD ["python", "run.py"]
 version: '3.8'
 
 services:
-  solarsense:
+  nexo-solar:
     build: .
-    container_name: solarsense-scada
+    container_name: nexo-solar
     restart: unless-stopped
     volumes:
       - ./data:/app/data
@@ -276,7 +276,7 @@ services:
 docker-compose up -d --build
 
 # Ver logs
-docker-compose logs -f solarsense
+docker-compose logs -f nexo-solar
 
 # Detener
 docker-compose down
@@ -314,7 +314,7 @@ performance:
 # .env
 MODBUS_HOST=192.168.1.100
 MODBUS_PORT=502
-DB_PATH=data/solarsense.db
+DB_PATH=data/nexo_solar.db
 LOG_LEVEL=WARNING
 ENCRYPTION_KEY=<generar_con_credential_encryptor>
 ```
@@ -336,20 +336,20 @@ New-NetFirewallRule -DisplayName "Modbus TCP" -Direction Inbound -LocalPort 502 
 
 ### 4. Rotación de Logs con Logrotate (Linux)
 
-Crear `/etc/logrotate.d/solarsense`:
+Crear `/etc/logrotate.d/nexo-solar`:
 
 ```
-/opt/solarsense-scada/logs/*.log {
+/opt/nexo-solar/logs/*.log {
     daily
     rotate 10
     compress
     delaycompress
     missingok
     notifempty
-    create 0640 solarsense solarsense
+    create 0640 nexo-solar nexo-solar
     sharedscripts
     postrotate
-        systemctl reload solarsense > /dev/null 2>&1 || true
+        systemctl reload nexo-solar > /dev/null 2>&1 || true
     endscript
 }
 ```
@@ -362,23 +362,23 @@ Crear `/etc/logrotate.d/solarsense`:
 
 ```bash
 # Linux systemd
-sudo systemctl status solarsense
+sudo systemctl status nexo-solar
 
 # Windows
-Get-Service -Name "SolarSense"  # si está registrado como servicio
+Get-Service -Name "Nexo Solar"  # si está registrado como servicio
 ```
 
 ### 2. Monitorear Logs
 
 ```bash
 # Seguir logs en tiempo real
-tail -f logs/solarsense.log
+tail -f logs/nexo_solar.log
 
 # Buscar errores
-grep "ERROR\|CRITICAL" logs/solarsense.log
+grep "ERROR\|CRITICAL" logs/nexo_solar.log
 
 # Estadísticas de logs
-awk '{print $5}' logs/solarsense.log | sort | uniq -c | sort -nr
+awk '{print $5}' logs/nexo_solar.log | sort | uniq -c | sort -nr
 ```
 
 ### 3. Verificar Conexión Modbus
@@ -405,7 +405,7 @@ Get-Process python | Select-Object CPU,WorkingSet
 
 ```bash
 # Detener servicio
-sudo systemctl stop solarsense
+sudo systemctl stop nexo-solar
 
 # Actualizar código
 git pull origin main
@@ -417,7 +417,7 @@ pip install -r requirements.txt
 python -c "from modbuspython.migrations.migration_manager import MigrationManager; MigrationManager().run_migrations()"
 
 # Iniciar servicio
-sudo systemctl start solarsense
+sudo systemctl start nexo-solar
 ```
 
 ---
@@ -426,16 +426,16 @@ sudo systemctl start solarsense
 
 ### 1. Backup Automático (Linux)
 
-Crear script `/opt/solarsense-scada/backup.sh`:
+Crear script `/opt/nexo-solar/backup.sh`:
 
 ```bash
 #!/bin/bash
-BACKUP_DIR="/backup/solarsense"
+BACKUP_DIR="/backup/nexo-solar"
 DATE=$(date +%Y%m%d_%H%M%S)
 mkdir -p $BACKUP_DIR
 
 # Backup base de datos
-cp data/solarsense.db $BACKUP_DIR/solarsense_$DATE.db
+cp data/nexo_solar.db $BACKUP_DIR/nexo_solar_$DATE.db
 
 # Backup configuración
 cp config.yaml $BACKUP_DIR/config_$DATE.yaml
@@ -449,7 +449,7 @@ echo "Backup completado: $DATE"
 
 Agregar a crontab (`crontab -e`):
 ```
-0 2 * * * /opt/solarsense-scada/backup.sh
+0 2 * * * /opt/nexo-solar/backup.sh
 ```
 
 ### 2. Backup Manual (Windows)
@@ -458,7 +458,7 @@ Agregar a crontab (`crontab -e`):
 $Date = Get-Date -Format "yyyyMMdd_HHmmss"
 New-Item -ItemType Directory -Path "backup" -Force
 
-Copy-Item "data\solarsense.db" "backup\solarsense_$Date.db"
+Copy-Item "data\nexo_solar.db" "backup\nexo_solar_$Date.db"
 Copy-Item "config.yaml" "backup\config_$Date.yaml"
 Copy-Item ".env" "backup\env_$Date"
 ```
@@ -467,13 +467,13 @@ Copy-Item ".env" "backup\env_$Date"
 
 ```bash
 # Detener aplicación
-sudo systemctl stop solarsense
+sudo systemctl stop nexo-solar
 
 # Restaurar backup
-cp /backup/solarsense/solarsense_20260506_020000.db data/solarsense.db
+cp /backup/nexo-solar/nexo_solar_20260506_020000.db data/nexo_solar.db
 
 # Iniciar aplicación
-sudo systemctl start solarsense
+sudo systemctl start nexo-solar
 ```
 
 ---
@@ -500,7 +500,7 @@ python -c "import modbuspython; print('OK')"
 ls -la data/ logs/
 
 # Corregir permisos
-chown -R solarsense:solarsense /opt/solarsense-scada
+chown -R nexo-solar:nexo-solar /opt/nexo-solar
 chmod -R 750 data logs
 ```
 
@@ -519,10 +519,10 @@ netstat -tulpn | grep 502
 
 ```bash
 # Ver logs del servicio
-journalctl -u solarsense -n 100
+journalctl -u nexo-solar -n 100
 
 # Verificar configuración
-cat /etc/systemd/system/solarsense.service
+cat /etc/systemd/system/nexo-solar.service
 ```
 
 ---

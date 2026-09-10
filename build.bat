@@ -1,5 +1,5 @@
 @echo off
-REM Script para copiar dependencias manuales de SolarSense SCADA
+REM Script para copiar dependencias manuales de Nexo Solar
 
 REM Verificar que el script NO se ejecute desde System32
 setlocal
@@ -13,11 +13,11 @@ endlocal
 
 REM Copiar dependencias manuales si existen
 REM Copiar PyQt6.sip
-if exist venv\Lib\site-packages\PyQt6\sip.cp*.pyd copy /Y venv\Lib\site-packages\PyQt6\sip.cp*.pyd dist\SolarSense\
-if not exist dist\SolarSense\PyQt6 mkdir dist\SolarSense\PyQt6
-if exist venv\Lib\site-packages\PyQt6\sip.cp*.pyd copy /Y venv\Lib\site-packages\PyQt6\sip.cp*.pyd dist\SolarSense\PyQt6\
+if exist venv\Lib\site-packages\PyQt6\sip.cp*.pyd copy /Y venv\Lib\site-packages\PyQt6\sip.cp*.pyd dist\Nexo Solar\
+if not exist dist\Nexo Solar\PyQt6 mkdir dist\Nexo Solar\PyQt6
+if exist venv\Lib\site-packages\PyQt6\sip.cp*.pyd copy /Y venv\Lib\site-packages\PyQt6\sip.cp*.pyd dist\Nexo Solar\PyQt6\
 REM Copiar PyQt6.QtCharts si existe
-if exist venv\Lib\site-packages\PyQt6\Qt6\plugins\PyQt6\QtCharts.pyd copy /Y venv\Lib\site-packages\PyQt6\Qt6\plugins\PyQt6\QtCharts.pyd dist\SolarSense\PyQt6\
+if exist venv\Lib\site-packages\PyQt6\Qt6\plugins\PyQt6\QtCharts.pyd copy /Y venv\Lib\site-packages\PyQt6\Qt6\plugins\PyQt6\QtCharts.pyd dist\Nexo Solar\PyQt6\
 
 REM Mostrar resultado
 if %errorlevel% neq 0 (

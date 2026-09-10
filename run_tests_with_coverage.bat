@@ -3,7 +3,7 @@ REM Script to run tests with coverage measurement
 REM Usage: run_tests_with_coverage.bat
 
 echo ========================================
-echo Running SolarSense SCADA Test Suite
+echo Running Nexo Solar Test Suite
 echo with Coverage Measurement
 echo ========================================
 echo.

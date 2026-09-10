@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "description": "JSON Schema for validating SolarSense SCADA configuration files",
+  "description": "JSON Schema for validating Nexo Solar configuration files",
   "properties": {
     "angles": {
       "description": "Angle limits configuration",
@@ -297,6 +297,6 @@
     "database",
     "logging"
   ],
-  "title": "SolarSense SCADA Configuration Schema",
+  "title": "Nexo Solar Configuration Schema",
   "type": "object"
 }

@@ -1,4 +1,4 @@
-"""Location Tab for SolarSense SCADA - Refactored.
+"""Location Tab for Nexo Solar - Refactored.
 
 Main container widget that composes:
 - LocationSetupTab: Equipment location with map and search
@@ -71,7 +71,7 @@ class LocationTab(QWidget):
 
     @staticmethod
     def _set_logo_text(logo: QLabel) -> None:
-        logo.setText("SolarSense")
+        logo.setText("Nexo Solar")
         logo.setFont(QFont("Arial", 28, QFont.Weight.Bold))
 
     def _build_main_panel(self) -> QFrame:

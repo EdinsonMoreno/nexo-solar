@@ -4,7 +4,7 @@
 
 ## Welcome
 
-Thank you for your interest in contributing to SolarSense SCADA. This guide covers development workflow, coding standards, testing, and submission process.
+Thank you for your interest in contributing to Nexo Solar. This guide covers development workflow, coding standards, testing, and submission process.
 
 ## Development Setup
 

@@ -1,4 +1,4 @@
-"""Location Setup Tab widget for SolarSense SCADA.
+"""Location Setup Tab widget for Nexo Solar.
 
 Provides location search, map display, coordinate management,
 and solar information estimation for the equipment location.
@@ -237,7 +237,7 @@ class LocationSetupTab(QWidget):
 
         try:
             url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json&limit=1"
-            headers = {"User-Agent": "SolarSense/1.0"}
+            headers = {"User-Agent": "Nexo Solar/1.0"}
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()

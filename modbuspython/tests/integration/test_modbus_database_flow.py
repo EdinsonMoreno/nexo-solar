@@ -111,7 +111,7 @@ class TestModbusToDatabaseFlow:
     def temp_db(self, tmp_path):
         """Create a temporary database for testing."""
 
-        db_path = tmp_path / "test_solarsense.db"
+        db_path = tmp_path / "test_nexo_solar.db"
 
         conn = connect_db(str(db_path))
 

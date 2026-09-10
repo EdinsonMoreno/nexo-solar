@@ -1,4 +1,4 @@
-"""SQLite database management for SolarSense SCADA.
+"""SQLite database management for Nexo Solar.
 
 DEPRECATED: This module is maintained for backward compatibility only.
 New code should use modbuspython.data_access.database_manager instead.

@@ -55,7 +55,7 @@ fail_under = 80
 directory = htmlcov
 
 # Title for HTML report
-title = SolarSense SCADA Coverage Report
+title = Nexo Solar Coverage Report
 
 [xml]
 # Output file for XML coverage report (for CI/CD)

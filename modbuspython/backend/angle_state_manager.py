@@ -1,4 +1,4 @@
-"""Centralized angle state management for SolarSense SCADA.
+"""Centralized angle state management for Nexo Solar.
 
 This module provides a singleton manager for tracking and propagating angle
 and operation mode state changes throughout the application. It ensures

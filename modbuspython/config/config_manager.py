@@ -1,4 +1,4 @@
-"""Configuration Manager for SolarSense SCADA application.
+"""Configuration Manager for Nexo Solar application.
 
 This module provides centralized configuration management with:
 - Singleton pattern for single source of truth
@@ -119,6 +119,7 @@ class ConfigurationManager:
         self._logger.warning(f"Configuration file not found: {config_path}. Creating default configuration.")
         try:
             self._config_defaults.create_default_file(config_path)
+            self._load_defaults()
         except Exception as e:
             error_msg = f"Failed to create default configuration: {e}"
             self._logger.error(error_msg, exc_info=True)
@@ -403,50 +404,7 @@ class ConfigurationManager:
 
     def _load_defaults(self) -> None:
         """Load default configuration values internally."""
-        self._config = {
-            "modbus": {
-                "host": "192.168.1.100",
-                "port": 502,
-                "timeout": 5.0,
-                "retry_attempts": 3,
-                "retry_backoff": 1.0,
-                "registers": {
-                    "rotation_setpoint": 0,
-                    "elevation_setpoint": 1,
-                    "rotation_actual": 2,
-                    "elevation_actual": 3,
-                    "irradiance": 4,
-                },
-            },
-            "database": {
-                "path": "data/solarsense.db",
-                "table_name": "measurements",
-                "connection_pool_size": 5,
-            },
-            "davis_weatherlink": {
-                "transport": "serial",
-                "serial_port": "/dev/ttyUSB0",
-                "baud_rate": 19200,
-                "ip_host": "192.168.1.50",
-                "ip_port": 22222,
-                "poll_interval_ms": 5000,
-                "timeout": 5.0,
-                "retry_attempts": 3,
-                "retry_backoff": 1.0,
-            },
-            "logging": {
-                "level": "INFO",
-                "file_path": "logs/solarsense.log",
-                "max_bytes": 10485760,
-                "backup_count": 5,
-            },
-            "angles": {
-                "rotation_min": 0,
-                "rotation_max": 360,
-                "elevation_min": 0,
-                "elevation_max": 145,
-            },
-        }
+        self._config = self._config_defaults.get_defaults()
 
     @property
     def modbus_config(self) -> Dict[str, Any]:

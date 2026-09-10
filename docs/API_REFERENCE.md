@@ -126,7 +126,7 @@ class ConnectionPool:
 ```python
 from modbuspython.data_access.connection_pool import ConnectionPool
 
-pool = ConnectionPool("data/solarsense.db", max_connections=5)
+pool = ConnectionPool("data/nexo_solar.db", max_connections=5)
 with pool.get_connection() as conn:
     cursor = conn.execute("SELECT * FROM measurements")
 ```
@@ -195,7 +195,7 @@ Servicio de logging centralizado con rotación y filtro de datos sensibles.
 
 ```python
 class LoggingService:
-    def __init__(self, log_file: str = "logs/solarsense.log", level: str = "INFO", max_bytes: int = 10485760, backup_count: int = 5)
+    def __init__(self, log_file: str = "logs/nexo_solar.log", level: str = "INFO", max_bytes: int = 10485760, backup_count: int = 5)
     def get_logger(self, name: str) -> logging.Logger
     def set_level(self, level: str) -> None
     def add_sensitive_key(self, key: str) -> None
@@ -382,13 +382,13 @@ class MigrationManager:
 ### Jerarquía de Excepciones
 
 ```python
-class SolarSenseException(Exception)
-class ConfigurationError(SolarSenseException)
-class ValidationError(SolarSenseException)
-class ModbusConnectionError(SolarSenseException)
-class ModbusOperationError(SolarSenseException)
-class DatabaseError(SolarSenseException)
-class MigrationError(SolarSenseException)
+class NexoSolarException(Exception)
+class ConfigurationError(NexoSolarException)
+class ValidationError(NexoSolarException)
+class ModbusConnectionError(NexoSolarException)
+class ModbusOperationError(NexoSolarException)
+class DatabaseError(NexoSolarException)
+class MigrationError(NexoSolarException)
 ```
 
 **Uso:**

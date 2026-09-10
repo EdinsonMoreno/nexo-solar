@@ -2,7 +2,7 @@
 
 ## Introducción
 
-Esta feature integra la lectura directa de una estación meteorológica **Davis Vantage Pro2** dentro del software **SolarSense SCADA** (Python/PyQt6). La estación se conecta mediante un WeatherLink Data Logger USB en modo VCP (Virtual COM Port) usando el protocolo serie nativo de Davis Instruments. Adicionalmente, se contempla una vía alternativa de conectividad mediante red IP (WeatherLink IP o adaptador compatible), coherente con la arquitectura TCP/IP ya presente en SolarSense.
+Esta feature integra la lectura directa de una estación meteorológica **Davis Vantage Pro2** dentro del software **Nexo Solar** (Python/PyQt6). La estación se conecta mediante un WeatherLink Data Logger USB en modo VCP (Virtual COM Port) usando el protocolo serie nativo de Davis Instruments. Adicionalmente, se contempla una vía alternativa de conectividad mediante red IP (WeatherLink IP o adaptador compatible), coherente con la arquitectura TCP/IP ya presente en Nexo Solar.
 
 El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones arquitectónicos que el `ModbusClient` existente: hilo `QThread` para I/O no bloqueante, señales Qt para comunicación con la UI, `LoggingService` para logging centralizado, `ConfigurationManager` para configuración, y `RetryStrategy` para reintentos con backoff exponencial.
 
@@ -19,9 +19,9 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 - **Transport**: Término genérico que engloba tanto Serial_Transport como IP_Transport.
 - **Wake_Up_Sequence**: Protocolo de activación de la consola Davis que consiste en enviar LF (0x0A) y esperar la respuesta LF+CR (0x0A 0x0D), según la referencia de comunicaciones Davis.
 - **WeatherData**: Estructura de datos que contiene todas las variables meteorológicas decodificadas de un LOOP_Packet.
-- **ConfigurationManager**: Singleton existente en SolarSense que gestiona la configuración mediante config.yaml.
-- **LoggingService**: Singleton existente en SolarSense para logging centralizado con rotación de ficheros.
-- **RetryStrategy**: Clase existente en SolarSense que implementa reintentos con backoff exponencial.
+- **ConfigurationManager**: Singleton existente en Nexo Solar que gestiona la configuración mediante config.yaml.
+- **LoggingService**: Singleton existente en Nexo Solar para logging centralizado con rotación de ficheros.
+- **RetryStrategy**: Clase existente en Nexo Solar que implementa reintentos con backoff exponencial.
 - **VCP**: Virtual COM Port — modo de operación del WeatherLink USB que lo presenta al sistema operativo como un puerto serie.
 
 ---
@@ -118,7 +118,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 
 ### Requisito 6: Hilo de lectura no bloqueante (QThread)
 
-**User Story:** Como desarrollador, quiero que la lectura de la estación Davis se ejecute en un hilo separado, para que la interfaz de usuario de SolarSense no se bloquee durante las operaciones de I/O.
+**User Story:** Como desarrollador, quiero que la lectura de la estación Davis se ejecute en un hilo separado, para que la interfaz de usuario de Nexo Solar no se bloquee durante las operaciones de I/O.
 
 #### Criterios de Aceptación
 
@@ -133,7 +133,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 
 ### Requisito 7: Integración con RetryStrategy
 
-**User Story:** Como desarrollador, quiero que los fallos transitorios de comunicación con la estación Davis se gestionen automáticamente mediante la misma estrategia de reintentos que usa el resto de SolarSense, para mantener la coherencia del sistema.
+**User Story:** Como desarrollador, quiero que los fallos transitorios de comunicación con la estación Davis se gestionen automáticamente mediante la misma estrategia de reintentos que usa el resto de Nexo Solar, para mantener la coherencia del sistema.
 
 #### Criterios de Aceptación
 
@@ -146,7 +146,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 
 ### Requisito 8: Logging centralizado
 
-**User Story:** Como operador, quiero que todas las operaciones relevantes del lector Davis queden registradas en el sistema de logging existente de SolarSense, para poder diagnosticar problemas de comunicación con la estación.
+**User Story:** Como operador, quiero que todas las operaciones relevantes del lector Davis queden registradas en el sistema de logging existente de Nexo Solar, para poder diagnosticar problemas de comunicación con la estación.
 
 #### Criterios de Aceptación
 
@@ -204,7 +204,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 
 ### Requisito 12: Manejo de errores del puerto serie
 
-**User Story:** Como operador, quiero que el sistema gestione correctamente los errores del puerto serie (dispositivo no disponible, desconexión inesperada), para que SolarSense no quede en un estado inconsistente si la estación Davis se desconecta.
+**User Story:** Como operador, quiero que el sistema gestione correctamente los errores del puerto serie (dispositivo no disponible, desconexión inesperada), para que Nexo Solar no quede en un estado inconsistente si la estación Davis se desconecta.
 
 #### Criterios de Aceptación
 
@@ -217,7 +217,7 @@ El módulo resultante (`DavisWeatherLinkReader`) debe seguir los mismos patrones
 
 ### Requisito 13: Integración con ConfigurationManager y config.yaml
 
-**User Story:** Como administrador, quiero que toda la configuración del lector Davis esté centralizada en el `config.yaml` existente, para mantener un único punto de configuración coherente con el resto de SolarSense.
+**User Story:** Como administrador, quiero que toda la configuración del lector Davis esté centralizada en el `config.yaml` existente, para mantener un único punto de configuración coherente con el resto de Nexo Solar.
 
 #### Criterios de Aceptación
 

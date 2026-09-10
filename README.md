@@ -70,7 +70,7 @@ pip install pyinstaller
 # 2. Compilar ejecutable
 pyinstaller main_app.spec
 
-# 3. El ejecutable se encuentra en dist/SolarSense_SCADA/
+# 3. El ejecutable se encuentra en dist/Nexo_Solar/
 ```
 
 ## Configuración

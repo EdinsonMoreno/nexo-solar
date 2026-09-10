@@ -32,8 +32,7 @@ a = Analysis([
         ('modbuspython/ui/assets/leaflet/images/*', 'ui/assets/leaflet/images'),
         ('modbuspython/ui/assets/images/*', 'ui/assets/images'),
         ('modbuspython/ui/assets/mapa.html', 'ui/assets'),
-        ('modbuspython/assets/uts.png', 'assets'),
-        ('modbuspython/assets/LogoSolarSense.png', 'assets'),
+        ('modbuspython/assets/LogoNexoSolar.png', 'assets'),
         ('modbuspython/assets/tripod_assembly.glb', 'assets'),
         ('modbuspython/assets/threejs/*', 'assets/threejs'),
         ('modbuspython/BannerISS/*', 'BannerISS'),
@@ -64,7 +63,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=False,
-    name='SolarSense',
+    name='Nexo Solar',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -81,5 +80,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='SolarSense'
+    name='Nexo Solar'
 )

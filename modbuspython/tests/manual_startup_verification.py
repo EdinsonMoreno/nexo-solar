@@ -57,12 +57,12 @@ modbus:
     elevation_actual: 3
     irradiance: 4
 database:
-  path: "data/solarsense.db"
+  path: "data/nexo_solar.db"
   table_name: "measurements"
   connection_pool_size: 5
 logging:
   level: "INFO"
-  file_path: "logs/solarsense.log"
+  file_path: "logs/nexo_solar.log"
   max_bytes: 10485760
   backup_count: 5
 angles:
@@ -96,7 +96,7 @@ performance:
     logger = LoggingService()
     logging_config = config.logging_config
     logger.setup(
-        log_file=Path(logging_config.get("file_path", "logs/solarsense.log")),
+        log_file=Path(logging_config.get("file_path", "logs/nexo_solar.log")),
         level=logging_config.get("level", "INFO"),
         max_bytes=logging_config.get("max_bytes", 10485760),
         backup_count=logging_config.get("backup_count", 5),
