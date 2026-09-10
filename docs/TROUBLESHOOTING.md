@@ -5,9 +5,13 @@
 1. Ejecute desde la raíz: `python run.py`.
 2. Active el entorno virtual e instale `requirements.txt`.
 3. Compruebe Python 3.10 o posterior y las bibliotecas Qt/XCB de Linux.
-4. Revise la excepción en la terminal y `logs/solarsense.log`.
+4. Revise la excepción en la terminal y `logs/nexo_solar.log`.
 
 No ejecute `modbuspython/main_app.py` directamente.
+
+Durante el arranque se muestra una pantalla de carga con barra de progreso.
+Si la aplicación se queda en esa pantalla, revise la terminal y el log para
+identificar si falló la configuración, la base de datos o la interfaz web.
 
 ## No hay datos Modbus
 
