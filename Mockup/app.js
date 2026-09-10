@@ -530,7 +530,7 @@ function updateHomeSummary() {
   const weatherSummary = document.getElementById('homeWeatherSummary');
   const windSummary = document.getElementById('homeWindSummary');
 
-  if (siteEl) siteEl.textContent = state.siteEnergyKwhM2.toFixed(3) + ' kWh/m²';
+  if (siteEl) siteEl.textContent = (state.siteEnergyKwhM2 * 1000).toFixed(3) + ' Wh/m²';
   if (panelEl) panelEl.textContent = panelEnergy.toFixed(3) + ' kWh';
   if (panelSub) panelSub.textContent = `${state.panelAreaM2.toFixed(2)} m² · ${(state.panelEfficiency * 100).toFixed(1)}% eficiencia`;
 
