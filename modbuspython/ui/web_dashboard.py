@@ -9,6 +9,7 @@ both UIs reflect the same backend state during the incremental migration.
 """
 
 import os
+import sys
 from typing import Any, Optional
 
 from PyQt6.QtCore import QUrl
@@ -23,6 +24,8 @@ from .web_bridge import WebBridge
 
 def _mockup_index_path() -> str:
     """Absolute path to Mockup/index.html (repo_root/Mockup/index.html)."""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, "Mockup", "index.html")
     here = os.path.dirname(os.path.abspath(__file__))
     return os.path.abspath(os.path.join(here, "..", "..", "Mockup", "index.html"))
 

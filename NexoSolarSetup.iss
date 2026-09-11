@@ -1,14 +1,18 @@
 ; Script de Inno Setup para Nexo Solar
 ; Generado para instalar la aplicación y sus dependencias
 
+#ifndef NexoSolarVersion
+#define NexoSolarVersion "1.0.0"
+#endif
+
 [Setup]
 AppName=Nexo Solar
-AppVersion=1.0
+AppVersion={#NexoSolarVersion}
 DefaultDirName={pf}\NexoSolar
 DefaultGroupName=Nexo Solar
 UninstallDisplayIcon={app}\Nexo Solar.exe
-OutputDir=.
-OutputBaseFilename=Nexo Solar_Installer
+OutputDir=dist\installers\windows
+OutputBaseFilename=NexoSolar-Setup-Windows-x64
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -17,10 +21,8 @@ ArchitecturesInstallIn64BitMode=x64
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Files]
-; Ejecutable principal
-Source: "dist\Nexo Solar\Nexo Solar.exe"; DestDir: "{app}"; Flags: ignoreversion
-; Todo el contenido de la app (recursos, módulos, datos, etc.)
-Source: "dist\Nexo Solar\_internal\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Todo el contenido generado por PyInstaller
+Source: "dist\Nexo Solar\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Nexo Solar"; Filename: "{app}\Nexo Solar.exe"

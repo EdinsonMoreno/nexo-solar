@@ -11,6 +11,29 @@ Repositorio privado del proyecto Nexo Solar del SENA CIDT de Barrancabermeja. La
 - Para usar datos reales: una estación Davis con datalogger USB/Serial o un logger IP compatible.
 - En Linux, las bibliotecas del sistema necesarias para Qt pueden ser requeridas por la distribución.
 
+## Descargas e instaladores
+
+Las versiones estables se publican desde ramas separadas por plataforma:
+
+- Windows: rama `production/windows`, instalador `NexoSolar-Setup-Windows-x64.exe`.
+- Fedora: rama `production/fedora`, paquete `nexo-solar-*.rpm`.
+
+Los instaladores se descargan desde [GitHub Releases](https://github.com/EdinsonMoreno/nexo-solar/releases). En este repositorio privado debe iniciar sesión con una cuenta autorizada para ver las descargas.
+
+También puede generar los instaladores manualmente:
+
+```bash
+# Fedora, desde la rama production/fedora
+scripts/build_fedora_rpm.sh 1.0.0
+```
+
+```powershell
+# Windows, desde la rama production/windows en PowerShell
+.\scripts\build_windows_installer.ps1 -Version 1.0.0
+```
+
+Los artefactos quedan en `dist/installers/` junto con `SHA256SUMS.txt`.
+
 ## Instalación y primera ejecución
 
 Desde la raíz del repositorio (la carpeta que contiene `run.py`):

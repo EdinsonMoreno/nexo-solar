@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Nexo Solar
+Comment=Banco de pruebas solar y meteorologico SENA CIDT
+Exec=nexo-solar
+Icon=nexo-solar
+Terminal=false
+Categories=Science;Education;
