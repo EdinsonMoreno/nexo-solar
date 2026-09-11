@@ -180,6 +180,7 @@ dmypy.json
 
 # Archivos de proyecto necesarios
 !main_app.spec
+!packaging/fedora/nexo-solar.spec
 !pytest.ini
 !mypy.ini
 

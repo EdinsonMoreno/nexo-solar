@@ -1,5 +1,4 @@
 # -*- mode: python ; coding: utf-8 -*-
-import sys
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 block_cipher = None
@@ -28,6 +27,8 @@ a = Analysis([
     binaries=[],
     datas=[
         # Recursos UI y backend
+        ('Mockup/*', 'Mockup'),
+        ('Mockup/vendor/leaflet/*', 'Mockup/vendor/leaflet'),
         ('modbuspython/ui/assets/leaflet/*', 'ui/assets/leaflet'),
         ('modbuspython/ui/assets/leaflet/images/*', 'ui/assets/leaflet/images'),
         ('modbuspython/ui/assets/images/*', 'ui/assets/images'),
@@ -35,12 +36,11 @@ a = Analysis([
         ('modbuspython/assets/LogoNexoSolar.png', 'assets'),
         ('modbuspython/assets/tripod_assembly.glb', 'assets'),
         ('modbuspython/assets/threejs/*', 'assets/threejs'),
-        ('modbuspython/BannerISS/*', 'BannerISS'),
         # Documentación relevante
         ('modbuspython/DOCUMENTACION_COMPLETA.md', 'modbuspython'),
-        # Código fuente necesario
-        ('modbuspython/backend/*.py', 'backend'),
-        ('modbuspython/ui/*.py', 'ui'),
+        ('modbuspython/config/*.yaml', 'modbuspython/config'),
+        ('modbuspython/config/*.json', 'modbuspython/config'),
+        ('docs/*.md', 'docs'),
         # Archivos HTML y recursos 3D
         ('modbuspython/ui/visor_3d_piranometro.html', 'ui'),
         # Iconos
@@ -62,7 +62,7 @@ exe = EXE(
     pyz,
     a.scripts,
     [],
-    exclude_binaries=False,
+    exclude_binaries=True,
     name='Nexo Solar',
     debug=False,
     bootloader_ignore_signals=False,
