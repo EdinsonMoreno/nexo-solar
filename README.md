@@ -20,6 +20,14 @@ Las versiones estables se publican desde ramas separadas por plataforma:
 
 Los instaladores se descargan desde [GitHub Releases](https://github.com/EdinsonMoreno/nexo-solar/releases). En este repositorio privado debe iniciar sesión con una cuenta autorizada para ver las descargas.
 
+| Sistema | Descarga | SHA256 |
+|---|---|---|
+| Windows x64 | [NexoSolar-Setup-Windows-x64.exe](https://github.com/EdinsonMoreno/nexo-solar/releases/download/windows-v1.0.0/NexoSolar-Setup-Windows-x64.exe) | `807bedaf148a13914f44d8503f6062c18f9ca68cf95038fd21b5bd0952dd1f2d` |
+| Fedora x86_64 | [nexo-solar-1.0.0-1.fc42.x86_64.rpm](https://github.com/EdinsonMoreno/nexo-solar/releases/download/fedora-v1.0.0/nexo-solar-1.0.0-1.fc42.x86_64.rpm) | `100c87da1877fd5ce321c8c3a53a103f81eb8b51a6e64d1a61f282c4d6a5c1a3` |
+| Fedora portable | [NexoSolar-Fedora-x86_64.tar.gz](https://github.com/EdinsonMoreno/nexo-solar/releases/download/fedora-v1.0.0/NexoSolar-Fedora-x86_64.tar.gz) | `087a419b1456b0dea6a16c6cb201a074482df0d8ea660739543b8ec3ef5de2f5` |
+
+El instalador de Windows incluye el ejecutable y el asistente de instalacion. El paquete Fedora instala la aplicacion como software del sistema. El archivo portable de Fedora sirve como respaldo cuando se necesita probar sin instalar el RPM.
+
 También puede generar los instaladores manualmente:
 
 ```bash
